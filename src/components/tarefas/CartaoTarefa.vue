@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 
 import type { CartaoTarefa } from '@/api/tarefas'
 
@@ -10,68 +11,88 @@ const props = defineProps<{
   cartao: CartaoTarefa
 }>()
 
+const route = useRoute()
+
 const prazos = computed(() => prazosDoCartao(props.cartao))
+
+/** Abre o detalhe levando os filtros do Painel, para a volta preservá-los. */
+const destino = computed(() => ({ name: 'detalheTarefa', params: { identifier: props.cartao.identifier }, query: route.query }))
 </script>
 
 <template>
-  <q-card flat bordered class="cartao-tarefa column">
-    <q-card-section class="q-pb-xs">
-      <div class="row items-center no-wrap q-gutter-xs q-mb-xs">
-        <q-chip
-          dense
-          square
-          size="sm"
-          text-color="white"
-          class="q-ml-none"
-          :style="{ backgroundColor: cartao.empresa.cor }"
-          :label="cartao.empresa.nome"
-        />
-        <q-space />
-        <q-badge v-if="cartao.prioridade !== null" outline color="primary" :label="`P${cartao.prioridade}`">
-          <q-tooltip>Prioridade {{ cartao.prioridade }}</q-tooltip>
-        </q-badge>
-        <q-icon v-if="cartao.bloqueada" name="block" color="negative" size="18px">
-          <q-tooltip>Bloqueada</q-tooltip>
-        </q-icon>
-      </div>
-
-      <div class="titulo text-body2 text-weight-medium">{{ cartao.titulo }}</div>
-      <div v-if="cartao.projetos" class="text-caption text-grey-7 ellipsis">{{ cartao.projetos }}</div>
-    </q-card-section>
-
-    <q-space />
-
-    <q-card-section class="row items-center q-pt-xs q-gutter-x-sm text-caption">
-      <span v-if="prazos.pendente" class="text-warning text-weight-medium">
-        <q-icon name="schedule" size="16px" /> Definir novo prazo
-      </span>
-      <span v-else>
-        <q-icon name="event" size="16px" class="text-grey-7" /> {{ prazos.interno }}
-      </span>
-      <span v-if="prazos.asana" class="text-grey-7">
-        (Asana: {{ prazos.asana }})
-      </span>
-
+  <router-link :to="destino" class="link-cartao" :aria-label="`Abrir a tarefa ${cartao.titulo}`">
+    <q-card flat bordered class="cartao-tarefa column">
+      <q-card-section class="q-pb-xs">
+        <div class="row items-center no-wrap q-gutter-xs q-mb-xs">
+          <q-chip
+            dense
+            square
+            size="sm"
+            text-color="white"
+            class="q-ml-none"
+            :style="{ backgroundColor: cartao.empresa.cor }"
+            :label="cartao.empresa.nome"
+          />
+          <q-space />
+          <q-badge v-if="cartao.prioridade !== null" outline color="primary" :label="`P${cartao.prioridade}`">
+            <q-tooltip>Prioridade {{ cartao.prioridade }}</q-tooltip>
+          </q-badge>
+          <q-icon v-if="cartao.bloqueada" name="block" color="negative" size="18px">
+            <q-tooltip>Bloqueada</q-tooltip>
+          </q-icon>
+        </div>
+  
+        <div class="titulo text-body2 text-weight-medium">{{ cartao.titulo }}</div>
+        <div v-if="cartao.projetos" class="text-caption text-grey-7 ellipsis">{{ cartao.projetos }}</div>
+      </q-card-section>
+  
       <q-space />
-
-      <span v-if="cartao.quantidadeRetrabalhos > 0" class="text-warning">
-        <q-icon name="replay" size="16px" /> {{ cartao.quantidadeRetrabalhos }}
-        <q-tooltip>{{ cartao.quantidadeRetrabalhos }} {{ cartao.quantidadeRetrabalhos === 1 ? 'retrabalho' : 'retrabalhos' }}</q-tooltip>
-      </span>
-      <span v-if="cartao.comentariosNaoLidos > 0" class="text-secondary">
-        <q-icon name="mark_chat_unread" size="16px" /> {{ cartao.comentariosNaoLidos }}
-        <q-tooltip>
-          {{ cartao.comentariosNaoLidos }} {{ cartao.comentariosNaoLidos === 1 ? 'comentário não lido' : 'comentários não lidos' }}
-        </q-tooltip>
-      </span>
-    </q-card-section>
-  </q-card>
+  
+      <q-card-section class="row items-center q-pt-xs q-gutter-x-sm text-caption">
+        <span v-if="prazos.pendente" class="text-warning text-weight-medium">
+          <q-icon name="schedule" size="16px" /> Definir novo prazo
+        </span>
+        <span v-else>
+          <q-icon name="event" size="16px" class="text-grey-7" /> {{ prazos.interno }}
+        </span>
+        <span v-if="prazos.asana" class="text-grey-7">
+          (Asana: {{ prazos.asana }})
+        </span>
+  
+        <q-space />
+  
+        <span v-if="cartao.quantidadeRetrabalhos > 0" class="text-warning">
+          <q-icon name="replay" size="16px" /> {{ cartao.quantidadeRetrabalhos }}
+          <q-tooltip>{{ cartao.quantidadeRetrabalhos }} {{ cartao.quantidadeRetrabalhos === 1 ? 'retrabalho' : 'retrabalhos' }}</q-tooltip>
+        </span>
+        <span v-if="cartao.comentariosNaoLidos > 0" class="text-secondary">
+          <q-icon name="mark_chat_unread" size="16px" /> {{ cartao.comentariosNaoLidos }}
+          <q-tooltip>
+            {{ cartao.comentariosNaoLidos }} {{ cartao.comentariosNaoLidos === 1 ? 'comentário não lido' : 'comentários não lidos' }}
+          </q-tooltip>
+        </span>
+      </q-card-section>
+    </q-card>
+  </router-link>
 </template>
 
 <style scoped>
+.link-cartao {
+  display: block;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
 .cartao-tarefa {
   height: 100%;
   border-radius: 8px;
+  transition: box-shadow 0.15s;
+}
+
+.link-cartao:hover .cartao-tarefa,
+.link-cartao:focus-visible .cartao-tarefa {
+  box-shadow: 0 2px 8px rgba(13, 43, 78, 0.18);
 }
 
 .titulo {

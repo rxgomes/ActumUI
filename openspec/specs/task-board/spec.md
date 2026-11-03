@@ -94,3 +94,10 @@ O Painel SHALL indicar quando está carregando, MUST mostrar a mensagem do erro 
 #### Scenario: Filtro sem resultado
 - **WHEN** a API devolve todos os grupos vazios com uma busca aplicada
 - **THEN** o Painel MUST informar que nenhuma tarefa corresponde aos filtros
+
+### Requirement: Abrir o detalhe pelo cartão
+Clicar no cartão de uma tarefa no Painel SHALL abrir o Detalhe dessa tarefa, preservando os filtros do Painel para a volta.
+
+#### Scenario: Abrir uma tarefa filtrada
+- **WHEN** o usuário, com o Painel filtrado pela Aureum-ERP, clica no cartão "Prioridade - IPI devolvido (reabrindo)"
+- **THEN** o Detalhe dessa tarefa MUST ser aberto, e a volta ao Painel MUST manter o filtro da Aureum-ERP

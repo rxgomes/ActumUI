@@ -20,6 +20,27 @@ O front sobe em `http://localhost:5173`, a única origem liberada no CORS da API
 
 O endereço da API fica em `.env.development` (`VITE_API_URL`).
 
+## Tipos da API
+
+Os tipos dos DTOs ficam em `src/api/schema.d.ts`, gerados a partir do OpenAPI da API e versionados (o build não precisa
+da API). Não edite esse arquivo à mão. Quando a API mudar, com ela rodando em `Development`:
+
+```bash
+npm run api:tipos
+```
+
+O gerador (`openapi-typescript`) roda via `npx` e não fica instalado no projeto: a versão 7 declara compatibilidade só
+com TypeScript 5, e o npm recusa a instalação junto com o TypeScript 6 do projeto.
+
+## Testes
+
+```bash
+npm test
+```
+
+Executa os testes do Vitest (`src/**/*.spec.ts`) no fuso `America/Sao_Paulo`, onde erros de conversão de datas
+`yyyy-MM-dd` aparecem.
+
 ## Build
 
 ```bash

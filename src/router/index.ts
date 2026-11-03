@@ -10,6 +10,7 @@ export const router = createRouter({
       component: MainLayout,
       children: [
         { path: '', name: 'painel', component: () => import('@/pages/PainelPage.vue') },
+        { path: ':caminho(.*)*', name: 'naoEncontrada', component: () => import('@/pages/NaoEncontradaPage.vue') },
       ],
     },
   ],

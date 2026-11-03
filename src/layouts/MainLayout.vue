@@ -70,6 +70,15 @@ onMounted(() => {
             <q-item-section>Painel</q-item-section>
           </q-item>
         </q-expansion-item>
+
+        <q-expansion-item default-opened icon="settings" label="Configurações" header-class="text-weight-medium">
+          <q-item clickable :to="{ name: 'empresas' }" exact active-class="text-primary bg-blue-1 text-weight-medium">
+            <q-item-section avatar>
+              <q-icon name="business" />
+            </q-item-section>
+            <q-item-section>Empresas</q-item-section>
+          </q-item>
+        </q-expansion-item>
       </q-list>
     </q-drawer>
 

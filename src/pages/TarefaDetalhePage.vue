@@ -5,6 +5,7 @@ import { useRoute } from 'vue-router'
 
 import { type Branch, bloquearTarefa, desbloquearTarefa, removerBranch } from '@/api/tarefas'
 import type { AcaoDaTarefa } from '@/components/tarefas/acoes'
+import AnaliseDaTarefa from '@/components/tarefas/AnaliseDaTarefa.vue'
 import BranchesDaTarefa from '@/components/tarefas/BranchesDaTarefa.vue'
 import CabecalhoDaTarefa from '@/components/tarefas/CabecalhoDaTarefa.vue'
 import ComentariosDaTarefa from '@/components/tarefas/ComentariosDaTarefa.vue'
@@ -160,6 +161,7 @@ function excluirBranch(branch: Branch): void {
           <BranchesDaTarefa :branches="tarefa.detalhe.branches" :excluindo="excluindoBranch" @excluir="excluirBranch" />
         </div>
         <div class="col-12 col-lg-5">
+          <AnaliseDaTarefa :identifier="tarefa.detalhe.identifier" :arquivada="tarefa.detalhe.status === 'arquivada'" />
           <RetrabalhosDaTarefa :retrabalhos="tarefa.detalhe.retrabalhos" :comentarios-novos="tarefa.comentariosNovos" />
           <ComentariosDaTarefa :comentarios="tarefa.detalhe.comentarios" :comentarios-novos="tarefa.comentariosNovos" />
         </div>

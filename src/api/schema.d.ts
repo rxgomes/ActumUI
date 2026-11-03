@@ -24,6 +24,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/claude/situacao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Situação da configuração da Claude API
+         * @description Informa se a chave da Claude API (Claude:ApiKey) está configurada e qual modelo será usado nas análises. Não chama a Anthropic e nunca devolve a chave.
+         */
+        get: operations["ObterSituacaoClaude"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/sincronizacoes": {
         parameters: {
             query?: never;
@@ -328,6 +348,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tarefas/{identifier}/analises": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Análises da tarefa
+         * @description Todas as versões da análise, da mais recente (atual) para a mais antiga, com os itens em ordem. Lista vazia quando a tarefa nunca foi analisada.
+         */
+        get: operations["ListarAnalises"];
+        put?: never;
+        /**
+         * Analisar a demanda com IA
+         * @description Envia à Claude API o contexto completo da tarefa (empresa, título, descrição, projetos, comentários e retrabalhos) e grava o objetivo, o checklist e as dúvidas como nova versão atual. Itens iguais a itens marcados na versão anterior já entram marcados. Chamada paga; pode levar dezenas de segundos.
+         */
+        post: operations["AnalisarTarefa"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tarefas/{identifier}/analises/itens/{itemIdentifier}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Marcar item da análise
+         * @description Marca (item do checklist feito, dúvida resolvida) ou desmarca um item da análise atual. Itens de versões anteriores não podem ser alterados. Nada é enviado ao Asana.
+         */
+        patch: operations["MarcarItemDaAnalise"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -357,6 +421,74 @@ export interface components {
              * @description New priority, from 1 (highest) to 3
              */
             prioridade: null | number | string;
+        };
+        /** @description Checklist item, test or question of an analysis */
+        AnaliseItemResponse: {
+            /**
+             * Format: uuid
+             * @description Item identifier
+             */
+            identifier: string;
+            /** @description `checklist`, `teste` or `duvida` */
+            tipo: components["schemas"]["TipoItemAnalise"];
+            /**
+             * Format: int16
+             * @description Position among the items of the same type, starting at 1
+             */
+            ordem: number | string;
+            /** @description Item text */
+            texto: string;
+            /** @description Area of a checklist item; `null` for tests and questions */
+            grupo: null | string;
+            /** @description Why a checklist item is vague in the demand; `null` when it is clear */
+            vago: null | string;
+            /** @description Done (checklist), tested (test) or resolved (question) */
+            concluido: boolean;
+            /**
+             * Format: date-time
+             * @description Local date and time of the marking; `null` when not marked
+             */
+            concluidoEm: null | string;
+        };
+        /** @description One version of the AI analysis of a task */
+        AnaliseResponse: {
+            /**
+             * Format: uuid
+             * @description Analysis identifier
+             */
+            identifier: string;
+            /**
+             * Format: int16
+             * @description Sequence in the task, starting at 1
+             */
+            versao: number | string;
+            /** @description Whether this is the current (most recent) version; only its items can be marked */
+            atual: boolean;
+            /** @description Expected result of the task */
+            objetivo: string;
+            /** @description Checklist grouped by area, groups and items in execution order */
+            checklist: components["schemas"]["GrupoDoChecklistResponse"][];
+            /** @description How to validate the delivery, in order */
+            testes: components["schemas"]["AnaliseItemResponse"][];
+            /** @description Questions to the requester, in order */
+            duvidas: components["schemas"]["AnaliseItemResponse"][];
+            /** @description Model that answered */
+            modelo: string;
+            /**
+             * Format: int32
+             * @description Input tokens consumed
+             */
+            tokensEntrada: number | string;
+            /**
+             * Format: int32
+             * @description Output tokens consumed
+             */
+            tokensSaida: number | string;
+            /**
+             * Format: date-time
+             * @description Local date and time of the analysis
+             */
+            analisadaEm: string;
         };
         /** @description State of the connection with the Asana */
         AsanaConexaoResponse: {
@@ -445,6 +577,13 @@ export interface components {
             /** @description Whether the task is blocked */
             bloqueada: boolean;
         };
+        /** @description Configuration state of the Claude API (the key itself is never returned) */
+        ClaudeSituacaoResponse: {
+            /** @description Whether `Claude:ApiKey` is configured */
+            configurado: boolean;
+            /** @description Model used in the analyses */
+            modelo: string;
+        };
         /** @description Comment of a task, copied from the Asana */
         ComentarioResponse: {
             /**
@@ -504,6 +643,13 @@ export interface components {
             /** @description Company color (`#RRGGBB`) */
             cor: string;
         };
+        /** @description Area of the checklist (e.g. `Front`, `Back: cálculo`) with its items */
+        GrupoDoChecklistResponse: {
+            /** @description Area name */
+            nome: string;
+            /** @description Items of the area, in order */
+            itens: components["schemas"]["AnaliseItemResponse"][];
+        };
         /** @description One board group */
         GrupoPainelResponse: {
             /** @description Group id (`retrabalho`, `entrada`, `atrasadas`, `hoje`, `esta_semana`, `proximas`, `sem_prazo`) */
@@ -533,6 +679,11 @@ export interface components {
              * @description Internal due date
              */
             prazoInterno: null | string;
+        };
+        /** @description Marking of an analysis item */
+        MarcarItemRequest: {
+            /** @description `true` marks the item as done/tested/resolved; `false` unmarks it */
+            concluido: null | boolean;
         };
         /** @enum {unknown} */
         MotivoArquivamento: "concluida_no_asana" | "reatribuida" | "excluida" | null;
@@ -766,6 +917,11 @@ export interface components {
          * @enum {unknown}
          */
         TipoBranch: "base" | "implementacao";
+        /**
+         * @description Kind of an analysis item (stored as snake_case text: `checklist`, `teste` or `duvida`)
+         * @enum {unknown}
+         */
+        TipoItemAnalise: "checklist" | "teste" | "duvida";
     };
     responses: never;
     parameters: never;
@@ -800,6 +956,26 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ObterSituacaoClaude: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClaudeSituacaoResponse"];
                 };
             };
         };
@@ -1402,6 +1578,140 @@ export interface operations {
             };
             /** @description Bad Gateway */
             502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListarAnalises: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnaliseResponse"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    AnalisarTarefa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnaliseResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    MarcarItemDaAnalise: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+                itemIdentifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarcarItemRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnaliseItemResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

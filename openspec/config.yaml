@@ -1,0 +1,77 @@
+schema: spec-driven
+
+context: |
+  Language: pt-BR
+  All artifacts must be written in pt-BR.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+
+  Projeto: Actum UI
+  - Front-end do Actum, organizador pessoal de demandas recebidas pelo Asana,
+    de uso local e por um único usuário (sem autenticação).
+  - Consome a Actum API (repositório separado ..\ActumAPI) via HTTP/JSON. A
+    visão do produto e as decisões estão em ..\ActumAPI\docs\especificacao-fase1.md,
+    e o comportamento da API em ..\ActumAPI\openspec\specs.
+  - Telas da Fase 1: Painel (tarefas agrupadas em retrabalho, entrada,
+    atrasadas, hoje, esta semana, próximas e sem prazo), Detalhe da tarefa e
+    os diálogos Iniciar, Novo prazo, Nova branch e Concluir (com a lista das
+    tags que serão adicionadas no Asana), além do botão Sincronizar e da
+    configuração das empresas.
+
+  Stack
+  - Vue 3 (Composition API, <script setup lang="ts">) + TypeScript + Vite.
+  - Quasar 2 (componentes, ícones Material, plugins Notify e Dialog), em pt-BR.
+  - Pinia para estado compartilhado e Vue Router para navegação.
+  - Node.js 24; servidor de desenvolvimento fixo em http://localhost:5173,
+    a única origem liberada no CORS da API.
+
+  Integração com a API
+  - Endereço base em VITE_API_URL (.env.development: http://localhost:5180).
+  - O contrato é o documento OpenAPI da API (http://localhost:5180/openapi/v1.json).
+    Os tipos TypeScript dos DTOs são gerados a partir dele, nunca escritos à mão.
+  - Erros chegam em Problem Details (application/problem+json) com title e
+    detail em pt-BR; erros de validação trazem errors por campo. O front
+    mostra detail ao usuário e associa errors aos campos dos formulários.
+  - 400 = regra de negócio ou validação; 404 = não encontrado; 409 = conflito
+    (ex.: sincronização em andamento, branch repetida); 502 = Asana indisponível.
+  - Enums chegam em snake_case (em_andamento, implementacao); datas sem
+    horário chegam como yyyy-MM-dd e datas com horário no horário local, sem fuso.
+  - O front não cria regra de negócio que pertence à API (agrupamento do
+    painel, transições de status, validação de branches): exibe o que a API
+    devolve e reage às respostas.
+  - Mudança de contrato nasce na API: se uma tela precisa de dado ou endpoint
+    que não existe, a change correspondente é feita primeiro no ActumAPI.
+
+  Layout (referência: ERP Aureum)
+  - Menu lateral à esquerda com grupos recolhíveis; cabeçalho azul-escuro com
+    o nome da aplicação; título da página com a data abaixo.
+  - Cartões brancos com borda arredondada, ícone em quadrado de fundo claro e
+    contadores com cor por categoria (Retrabalho laranja, Atrasadas vermelho,
+    Hoje azul). Cores da marca em src/css/quasar-variables.sass.
+  - A cor de cada empresa vem da API e identifica as tarefas dela.
+
+  Convenções
+  - Padrões de código (estrutura de pastas, nomenclatura, acesso à API,
+    datas, textos) definidos em CLAUDE.md, na raiz do repositório.
+  - Todo texto exibido ao usuário em pt-BR.
+
+rules:
+  proposal:
+    - Indicar as telas, diálogos e componentes afetados
+    - Listar os endpoints da API usados e indicar se a mudança exige alteração na API (change no ..\ActumAPI antes)
+    - Declarar explicitamente o que está fora do escopo
+  design:
+    - Descrever os estados de cada tela ou diálogo (carregando, vazio, erro, sucesso) e como os erros da API são exibidos
+    - Indicar stores, rotas e composables novos ou alterados
+    - Justificar qualquer dependência npm nova
+  tasks:
+    - Agrupar tarefas por área (api, stores, páginas e componentes)
+    - Incluir verificação no navegador com a API rodando e, quando aplicável, testes
+    - Incluir a regeneração dos tipos da API quando o contrato usado mudar
+
+operations:
+  apply:
+    guidance:
+      - Seguir os padrões de código de CLAUDE.md em todo código novo ou modificado
+      - Não editar à mão os tipos gerados a partir do OpenAPI; regenerá-los
+      - Não reformatar código fora do escopo da mudança
+      - Verificar com npm run build (inclui vue-tsc) antes de marcar uma tarefa como concluída

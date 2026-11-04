@@ -91,3 +91,20 @@ describe('comoErroDaApi', () => {
     expect(comoErroDaApi(new Error('falha interna')).message).toBe(MensagemErroInesperado)
   })
 })
+
+describe('extensões do Problem Details', () => {
+  it('guarda os campos extras com os nomes como vieram', async () => {
+    const corpo = { title: 'Falha', status: 502, detail: 'O Asana não respondeu.', traceId: '00-abc', anexosEnviados: ['print.png'] }
+
+    const erro = await erroDe(executar(async () => ({ error: corpo, response: resposta(502) })))
+
+    expect(erro.message).toBe('O Asana não respondeu.')
+    expect(erro.extensoes).toEqual({ anexosEnviados: ['print.png'] })
+  })
+
+  it('fica vazio sem campos extras', async () => {
+    const erro = await erroDe(executar(async () => ({ error: { title: 'Recurso não encontrado.', detail: 'Tarefa não encontrada.' }, response: resposta(404) })))
+
+    expect(erro.extensoes).toEqual({})
+  })
+})

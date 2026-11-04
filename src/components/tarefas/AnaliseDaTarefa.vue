@@ -3,9 +3,11 @@ import { copyToClipboard, useQuasar } from 'quasar'
 import { computed, watch } from 'vue'
 
 import { type ItemDaAnalise as Item, progressoDoChecklist, textoDasDuvidas } from '@/api/analises'
+import { textoDasDuvidasParaEnviar } from '@/api/comentarios'
 import { formatarDataHora } from '@/api/datas'
 import { useNotificarErro } from '@/composables/useNotificarErro'
 import { useAnaliseStore } from '@/stores/analise'
+import { useNovoComentarioStore } from '@/stores/novoComentario'
 
 import ItemDaAnalise from './ItemDaAnalise.vue'
 
@@ -21,6 +23,7 @@ const props = defineProps<{
 const quasar = useQuasar()
 const notificarErro = useNotificarErro()
 const analise = useAnaliseStore()
+const novoComentario = useNovoComentarioStore()
 
 watch(() => props.identifier, (novo) => void analise.carregar(novo), { immediate: true })
 
@@ -67,6 +70,14 @@ async function marcar(item: Item, concluido: boolean): Promise<void> {
   } catch (erro) {
     notificarErro(erro)
   }
+}
+
+/** Dúvidas ainda não resolvidas da versão exibida, prontas para o comentário. */
+const duvidasParaEnviar = computed(() => (exibida.value ? textoDasDuvidasParaEnviar(exibida.value) : ''))
+
+/** Preenche a caixa de comentário com as dúvidas para revisão; nada é enviado aqui. */
+function enviarDuvidas(): void {
+  novoComentario.acrescentarTexto(duvidasParaEnviar.value)
 }
 
 async function copiarDuvidas(): Promise<void> {
@@ -246,6 +257,19 @@ function habilitado(item: Item): boolean {
           <div class="row items-center q-mb-xs">
             <div class="text-subtitle2 col"><q-icon name="help_outline" class="q-mr-xs" />Dúvidas para o solicitante</div>
             <q-btn flat dense no-caps color="primary" icon="content_copy" label="Copiar dúvidas" @click="copiarDuvidas" />
+            <q-btn
+              flat
+              dense
+              no-caps
+              color="primary"
+              icon="forum"
+              label="Enviar dúvidas ao Asana"
+              :disable="duvidasParaEnviar === '' || arquivada"
+              @click="enviarDuvidas"
+            >
+              <q-tooltip v-if="duvidasParaEnviar === ''">Todas as dúvidas estão resolvidas.</q-tooltip>
+              <q-tooltip v-else>Preenche a caixa de comentário para você revisar antes de enviar.</q-tooltip>
+            </q-btn>
           </div>
           <q-list dense>
             <ItemDaAnalise

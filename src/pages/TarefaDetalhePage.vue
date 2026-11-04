@@ -163,7 +163,13 @@ function excluirBranch(branch: Branch): void {
         <div class="col-12 col-lg-5">
           <AnaliseDaTarefa :identifier="tarefa.detalhe.identifier" :arquivada="tarefa.detalhe.status === 'arquivada'" />
           <RetrabalhosDaTarefa :retrabalhos="tarefa.detalhe.retrabalhos" :comentarios-novos="tarefa.comentariosNovos" />
-          <ComentariosDaTarefa :comentarios="tarefa.detalhe.comentarios" :comentarios-novos="tarefa.comentariosNovos" />
+          <ComentariosDaTarefa
+            :identifier="tarefa.detalhe.identifier"
+            :arquivada="tarefa.detalhe.status === 'arquivada'"
+            :comentarios="tarefa.detalhe.comentarios"
+            :comentarios-novos="tarefa.comentariosNovos"
+            @enviado="tarefa.recarregar()"
+          />
         </div>
       </div>
 

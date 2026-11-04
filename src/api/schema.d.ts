@@ -392,6 +392,46 @@ export interface paths {
         patch: operations["MarcarItemDaAnalise"];
         trace?: never;
     };
+    "/tarefas/{identifier}/participantes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Participantes para menção
+         * @description Lê do Asana, na hora, quem segue a tarefa (exceto o próprio usuário), com a sugestão de quem mencionar: quem fez a reabertura mais recente ou, sem reabertura, quem comentou por último.
+         */
+        get: operations["ListarParticipantes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tarefas/{identifier}/comentarios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Enviar comentário ao Asana
+         * @description Formulário multipart com texto, menções (gid dos participantes) e arquivos (até 10, 25 MB cada, 50 MB no total). Anexa os arquivos à tarefa no Asana e publica o comentário com as menções e a lista de anexos; o comentário fica registrado no Actum como lido. Se parte dos anexos já tiver sido enviada quando algo falhar, a resposta traz anexosEnviados.
+         */
+        post: operations["EnviarComentario"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -584,6 +624,13 @@ export interface components {
             /** @description Model used in the analyses */
             modelo: string;
         };
+        /** @description Comment published in the Asana and recorded in the Actum */
+        ComentarioEnviadoResponse: {
+            /** @description Comment as it appears in the task detail */
+            comentario: components["schemas"]["ComentarioResponse"];
+            /** @description Names of the files attached to the task, in order */
+            anexos: string[];
+        };
         /** @description Comment of a task, copied from the Asana */
         ComentarioResponse: {
             /**
@@ -680,6 +727,10 @@ export interface components {
              */
             prazoInterno: null | string;
         };
+        KeyValuePairOfstringAndStringValues: {
+            key: null | string;
+            value: string[];
+        };
         /** @description Marking of an analysis item */
         MarcarItemRequest: {
             /** @description `true` marks the item as done/tested/resolved; `false` unmarks it */
@@ -719,6 +770,15 @@ export interface components {
              *     `esta_semana`, `proximas`, `sem_prazo`
              */
             grupos: components["schemas"]["GrupoPainelResponse"][];
+        };
+        /** @description Person following the task in the Asana, who can be mentioned in a comment */
+        ParticipanteResponse: {
+            /** @description User identifier in the Asana (sent back in `mencoes`) */
+            gid: string;
+            /** @description User name */
+            nome: string;
+            /** @description Whether this is the suggested person to mention (who reopened or last commented) */
+            sugerido: boolean;
         };
         ProblemDetails: {
             type?: null | string;
@@ -1712,6 +1772,108 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListarParticipantes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParticipanteResponse"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    EnviarComentario: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["KeyValuePairOfstringAndStringValues"][];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComentarioEnviadoResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
                 headers: {
                     [name: string]: unknown;
                 };

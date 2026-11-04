@@ -23,12 +23,22 @@ export class ErroDaApi extends Error {
   /** Mensagens de validação por campo, ex.: `{ prazoInterno: ['O prazo interno é obrigatório.'] }`. */
   readonly errosPorCampo: Readonly<Record<string, string[]>>
 
-  constructor(tipo: TipoDeErro, mensagem: string, status?: number, errosPorCampo: Record<string, string[]> = {}) {
+  /** Campos extras do Problem Details, com os nomes como vieram, ex.: `{ anexosEnviados: ['print.png'] }`. */
+  readonly extensoes: Readonly<Record<string, unknown>>
+
+  constructor(
+    tipo: TipoDeErro,
+    mensagem: string,
+    status?: number,
+    errosPorCampo: Record<string, string[]> = {},
+    extensoes: Record<string, unknown> = {},
+  ) {
     super(mensagem)
     this.name = 'ErroDaApi'
     this.tipo = tipo
     this.status = status
     this.errosPorCampo = errosPorCampo
+    this.extensoes = extensoes
   }
 }
 
@@ -76,7 +86,7 @@ export function erroDaResposta(corpo: unknown, status: number): ErroDaApi {
 
   const mensagem = textoOuNulo(corpo.detail) ?? textoOuNulo(corpo.title) ?? MensagemErroInesperado
 
-  return new ErroDaApi('problema', mensagem, status, errosEmCamelCase(corpo.errors))
+  return new ErroDaApi('problema', mensagem, status, errosEmCamelCase(corpo.errors), extensoesDe(corpo))
 }
 
 /**
@@ -97,6 +107,13 @@ function ehProblemDetails(corpo: unknown): corpo is ProblemDetailsRecebido {
 
 function textoOuNulo(valor: string | null | undefined): string | null {
   return typeof valor === 'string' && valor.trim().length > 0 ? valor : null
+}
+
+/** Campos padrão do Problem Details; os demais são extensões. */
+const CamposPadrao = new Set(['type', 'title', 'status', 'detail', 'instance', 'traceId', 'errors'])
+
+function extensoesDe(corpo: ProblemDetailsRecebido): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(corpo).filter(([campo]) => !CamposPadrao.has(campo)))
 }
 
 /** A API devolve as chaves de `errors` com o nome da propriedade C# (PascalCase). */

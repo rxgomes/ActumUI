@@ -17,6 +17,17 @@ O Painel SHALL exibir os grupos Retrabalho, Entrada, Atrasadas, Hoje, Esta seman
 - **WHEN** a API devolve o grupo `esta_semana` com a lista vazia
 - **THEN** a seção Esta semana MUST continuar visível, informando que não há tarefas
 
+### Requirement: Grupos recolhíveis
+Cada seção do Painel SHALL poder ser recolhida e expandida pelo cabeçalho (com a seta, o nome e a quantidade sempre visíveis). Todas começam abertas; as recolhidas pelo usuário MUST continuar recolhidas na próxima visita, no mesmo navegador.
+
+#### Scenario: Recolher uma seção
+- **WHEN** o usuário clica no cabeçalho da seção Próximas
+- **THEN** os cartões da seção MUST ser ocultados, o cabeçalho MUST continuar visível com a quantidade, e ao recarregar a página a seção MUST continuar recolhida
+
+#### Scenario: Contador do resumo abre a seção
+- **WHEN** a seção Atrasadas está recolhida e o usuário clica no contador Atrasadas do resumo
+- **THEN** a seção MUST ser expandida e a página MUST rolar até ela
+
 ### Requirement: Resumo dos grupos
 O Painel SHALL exibir, acima das seções, um resumo com a quantidade de tarefas de cada grupo, cada um com ícone e cor próprios: Retrabalho em laranja, Atrasadas em vermelho e Hoje em azul.
 

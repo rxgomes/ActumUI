@@ -28,5 +28,6 @@
     "vite": "^8.3.5",
     "vitest": "^5.1.0",
     "vue-tsc": "^3.3.13"
-  }
+  },
+  "web-types": "./node_modules/quasar/dist/web-types/web-types.json"
 }

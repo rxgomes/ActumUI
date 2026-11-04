@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { GrupoDoPainel } from '@/api/tarefas'
+import { useGruposRecolhidos } from '@/composables/useGruposRecolhidos'
 
 import { metadadosDoGrupo } from './grupos'
 
@@ -8,7 +9,11 @@ defineProps<{
   grupos: GrupoDoPainel[]
 }>()
 
+const gruposRecolhidos = useGruposRecolhidos()
+
 function irParaOGrupo(grupo: string): void {
+  // Um grupo recolhido é aberto antes de rolar até ele.
+  gruposRecolhidos.abrir(grupo)
   document.getElementById(`grupo-${grupo}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 </script>

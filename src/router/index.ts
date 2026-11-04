@@ -11,6 +11,7 @@ export const router = createRouter({
       children: [
         { path: '', name: 'painel', component: () => import('@/pages/PainelPage.vue') },
         { path: 'empresas', name: 'empresas', component: () => import('@/pages/EmpresasPage.vue') },
+        { path: 'retrabalho', name: 'retrabalho', component: () => import('@/pages/RetrabalhoPage.vue') },
         { path: 'tarefas/:identifier', name: 'detalheTarefa', component: () => import('@/pages/TarefaDetalhePage.vue') },
         { path: ':caminho(.*)*', name: 'naoEncontrada', component: () => import('@/pages/NaoEncontradaPage.vue') },
       ],

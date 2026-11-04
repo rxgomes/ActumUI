@@ -33,6 +33,7 @@ function prazo(valor: string | null): string {
           :subtitle="`Reaberta em ${formatarDataHora(retrabalho.reabertaEm)}`"
         >
           <div class="text-body2 q-mb-sm">
+            <div v-if="retrabalho.concluidaEm">Concluída em {{ formatarDataHora(retrabalho.concluidaEm) }}</div>
             <div>Reaberta por: {{ retrabalho.reabertaPor ?? 'não identificado no histórico do Asana' }}</div>
             <div>Prazo anterior: {{ prazo(retrabalho.prazoInternoAnterior) }} · Novo prazo: {{ prazo(retrabalho.prazoInternoNovo) }}</div>
             <div>{{ retrabalho.resolvidoEm ? `Resolvido em ${formatarDataHora(retrabalho.resolvidoEm)}` : 'Em aberto' }}</div>

@@ -40,7 +40,7 @@ A página SHALL listar as branches da tarefa com tipo (base ou implementação),
 - **THEN** a página MUST indicar `main` como enviada ao Asana e `fix/ipi-devolvido-pagamento` como pendente, do retrabalho 1
 
 ### Requirement: Histórico de retrabalho
-A página SHALL listar os retrabalhos em ordem, cada um com número, data da reabertura, quem reabriu, prazo anterior, novo prazo e se já foi resolvido, junto com os comentários que a API associa a essa reabertura.
+A página SHALL listar os retrabalhos em ordem, cada um com número, data da conclusão que precedeu a reabertura (quando a API a informa), data da reabertura, quem reabriu, prazo anterior, novo prazo e se já foi resolvido, junto com os comentários que a API associa a essa reabertura.
 
 #### Scenario: Motivo da reabertura
 - **WHEN** a tarefa foi reaberta por "Maria" em `2026-11-01T10:00:00` e a API associa ao retrabalho os comentários "O IPI da devolução não somou" e "Print em anexo"
@@ -49,6 +49,10 @@ A página SHALL listar os retrabalhos em ordem, cada um com número, data da rea
 #### Scenario: Reabertura sem autor
 - **WHEN** o retrabalho não tem quem reabriu (reabertura não encontrada no histórico do Asana)
 - **THEN** a página MUST indicar que o autor da reabertura não foi identificado
+
+#### Scenario: Conclusão antes da reabertura
+- **WHEN** o retrabalho tem `concluidaEm` `2026-10-30T20:40:00`
+- **THEN** o retrabalho MUST mostrar "Concluída em 30/10/2026 20:40" antes da reabertura; sem `concluidaEm`, essa linha MUST ser omitida
 
 ### Requirement: Comentários
 A página SHALL listar todos os comentários da tarefa com autor, data e texto, do mais antigo para o mais recente, destacando os que ainda não tinham sido lidos quando a página foi aberta.

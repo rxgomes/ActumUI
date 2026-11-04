@@ -432,6 +432,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/retrabalhos/indicadores": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Indicadores de retrabalho
+         * @description Por empresa e no total, no período (pela data da reabertura, até 24 meses): retrabalhos, tarefas com retrabalho, tarefas concluídas, taxa de retrabalho, evolução mensal e as 10 tarefas com mais retrabalhos. Retrabalho é cada 'concluiu' seguido de 'marcou como não concluída' no histórico do Asana.
+         */
+        get: operations["ObterIndicadoresDeRetrabalho"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/retrabalhos/reprocessamento": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reprocessar o histórico do Asana
+         * @description Lê do Asana o histórico de todas as tarefas e recalcula conclusões e retrabalhos (inclusive os anteriores ao Actum). Uma tarefa que falha mantém os retrabalhos que tinha e aparece em falhas. Não roda junto com a sincronização (409). Só leitura no Asana.
+         */
+        post: operations["ReprocessarHistoricoDeRetrabalho"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tarefas/{identifier}/anotacoes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Anotações privadas da tarefa
+         * @description Anotações da tarefa, da mais antiga para a mais recente. Ficam só no Actum, nunca vão para o Asana.
+         */
+        get: operations["ListarAnotacoes"];
+        put?: never;
+        /**
+         * Criar anotação privada
+         * @description Cria uma anotação (até 10.000 caracteres) na tarefa, em qualquer status, inclusive arquivada. Nada é enviado ao Asana.
+         */
+        post: operations["CriarAnotacao"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tarefas/{identifier}/anotacoes/{anotacaoIdentifier}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Alterar anotação privada
+         * @description Altera o texto da anotação e registra quando foi alterada.
+         */
+        put: operations["AlterarAnotacao"];
+        post?: never;
+        /** Excluir anotação privada */
+        delete: operations["ExcluirAnotacao"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -529,6 +614,31 @@ export interface components {
              * @description Local date and time of the analysis
              */
             analisadaEm: string;
+        };
+        /** @description Text of a private note */
+        AnotacaoRequest: {
+            /** @description Note text, up to 10,000 characters */
+            texto: null | string;
+        };
+        /** @description Private note of a task */
+        AnotacaoResponse: {
+            /**
+             * Format: uuid
+             * @description Note identifier
+             */
+            identifier: string;
+            /** @description Note text */
+            texto: string;
+            /**
+             * Format: date-time
+             * @description Local date and time of the creation
+             */
+            criadaEm: string;
+            /**
+             * Format: date-time
+             * @description Local date and time of the last change; `null` when never changed
+             */
+            alteradaEm: null | string;
         };
         /** @description State of the connection with the Asana */
         AsanaConexaoResponse: {
@@ -690,6 +800,18 @@ export interface components {
             /** @description Company color (`#RRGGBB`) */
             cor: string;
         };
+        /** @description Task whose Asana history could not be read in the reprocessing */
+        FalhaDoReprocessamentoResponse: {
+            /**
+             * Format: uuid
+             * @description Task identifier
+             */
+            identifier: string;
+            /** @description Task title */
+            titulo: string;
+            /** @description Failure, in pt-BR */
+            erro: string;
+        };
         /** @description Area of the checklist (e.g. `Front`, `Back: cálculo`) with its items */
         GrupoDoChecklistResponse: {
             /** @description Area name */
@@ -715,6 +837,64 @@ export interface components {
                 [key: string]: string[];
             };
         };
+        /** @description Rework indicators of a company (or of the total) */
+        IndicadorDaEmpresaResponse: {
+            /**
+             * Format: uuid
+             * @description Company identifier; `null` in the total
+             */
+            identifier: null | string;
+            /** @description Company name, or "Total" */
+            nome: string;
+            /** @description Company color; `null` in the total */
+            cor: null | string;
+            /**
+             * Format: int32
+             * @description Reworks reopened in the period
+             */
+            retrabalhos: number | string;
+            /**
+             * Format: int32
+             * @description Tasks with at least one rework reopened in the period
+             */
+            tarefasComRetrabalho: number | string;
+            /**
+             * Format: int32
+             * @description Tasks completed at least once in the period
+             */
+            tarefasConcluidas: number | string;
+            /**
+             * Format: double
+             * @description Percentage (one decimal) of the tasks completed in the period that were reopened after a completion of the period; `null` without completions
+             */
+            taxa: null | number | string;
+        };
+        /** @description Rework indicators of the period, per company and in total */
+        IndicadoresResponse: {
+            /**
+             * Format: date
+             * @description First day of the period
+             */
+            de: string;
+            /**
+             * Format: date
+             * @description Last day of the period
+             */
+            ate: string;
+            /** @description Indicators of each company of the filter */
+            empresas: components["schemas"]["IndicadorDaEmpresaResponse"][];
+            /** @description Indicators of all companies of the filter together */
+            total: components["schemas"]["IndicadorDaEmpresaResponse"];
+            /** @description Reworks per month of the period and company, including months without rework */
+            evolucao: components["schemas"]["MesDeRetrabalhoResponse"][];
+            /** @description Up to 10 tasks with more reworks in the period */
+            ranking: components["schemas"]["TarefaDoRankingResponse"][];
+            /**
+             * Format: date-time
+             * @description When the Asana history was last reprocessed; `null` when never
+             */
+            ultimoReprocessamentoEm: null | string;
+        };
         /** @description Start of a task from the inbox */
         IniciarTarefaRequest: {
             /** @description Base branch name (e.g. `main`) */
@@ -735,6 +915,13 @@ export interface components {
         MarcarItemRequest: {
             /** @description `true` marks the item as done/tested/resolved; `false` unmarks it */
             concluido: null | boolean;
+        };
+        /** @description Reworks of a month, per company */
+        MesDeRetrabalhoResponse: {
+            /** @description Month, as `yyyy-MM` */
+            mes: string;
+            /** @description Reworks of each company of the filter in the month */
+            porEmpresa: components["schemas"]["RetrabalhosDaEmpresaNoMesResponse"][];
         };
         /** @enum {unknown} */
         MotivoArquivamento: "concluida_no_asana" | "reatribuida" | "excluida" | null;
@@ -788,6 +975,26 @@ export interface components {
             detail?: null | string;
             instance?: null | string;
         };
+        /** @description Summary of the reprocessing of the Asana history */
+        ReprocessamentoResponse: {
+            /**
+             * Format: int32
+             * @description Tasks whose history was read
+             */
+            tarefasLidas: number | string;
+            /**
+             * Format: int32
+             * @description Reworks recorded before the reprocessing
+             */
+            retrabalhosAntes: number | string;
+            /**
+             * Format: int32
+             * @description Reworks recorded after the reprocessing
+             */
+            retrabalhosDepois: number | string;
+            /** @description Tasks whose history could not be read (they keep their reworks) */
+            falhas: components["schemas"]["FalhaDoReprocessamentoResponse"][];
+        };
         /** @description Rework (reopening) of a task */
         RetrabalhoResponse: {
             /**
@@ -827,6 +1034,24 @@ export interface components {
              *     explain the reason
              */
             comentarios: components["schemas"]["ComentarioResponse"][];
+            /**
+             * Format: date-time
+             * @description Completion that preceded the reopening (from the Asana history); `null` before the history is reprocessed
+             */
+            concluidaEm?: null | string;
+        };
+        /** @description Reworks of a company in a month */
+        RetrabalhosDaEmpresaNoMesResponse: {
+            /**
+             * Format: uuid
+             * @description Company identifier
+             */
+            identifier: string;
+            /**
+             * Format: int32
+             * @description Reworks reopened in the month
+             */
+            quantidade: number | string;
         };
         /** @description Summary of a synchronization run */
         SincronizacaoResponse: {
@@ -971,6 +1196,30 @@ export interface components {
             retrabalhos: components["schemas"]["RetrabalhoResponse"][];
             /** @description Every comment, oldest first */
             comentarios: components["schemas"]["ComentarioResponse"][];
+        };
+        /** @description Task in the ranking of reworks of the period */
+        TarefaDoRankingResponse: {
+            /**
+             * Format: uuid
+             * @description Task identifier (opens the detail)
+             */
+            identifier: string;
+            /** @description Task title */
+            titulo: string;
+            /** @description Company of the task */
+            empresa: components["schemas"]["EmpresaResumoResponse"];
+            /** @description Internal status */
+            status: components["schemas"]["StatusTarefa"];
+            /**
+             * Format: int32
+             * @description Reworks reopened in the period
+             */
+            retrabalhos: number | string;
+            /**
+             * Format: date-time
+             * @description Last reopening in the period
+             */
+            ultimaReaberturaEm: string;
         };
         /**
          * @description Role of a branch in the task (stored as snake_case text: `base` or `implementacao`)
@@ -1874,6 +2123,248 @@ export interface operations {
             };
             /** @description Bad Gateway */
             502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ObterIndicadoresDeRetrabalho: {
+        parameters: {
+            query: {
+                /** @description First day of the period (reopening date) */
+                De: string;
+                /** @description Last day of the period (reopening date), at most 24 months after DateOnly? IndicadoresFiltro.De */
+                Ate: string;
+                /** @description Company identifier; all companies when not informed */
+                Empresa?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndicadoresResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ReprocessarHistoricoDeRetrabalho: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReprocessamentoResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListarAnotacoes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnotacaoResponse"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CriarAnotacao: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnotacaoRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnotacaoResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    AlterarAnotacao: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+                anotacaoIdentifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnotacaoRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnotacaoResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ExcluirAnotacao: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+                anotacaoIdentifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

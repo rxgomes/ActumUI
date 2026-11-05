@@ -1,4 +1,5 @@
-import type { MotivoArquivamento, StatusTarefa } from '@/api/tarefas'
+import { formatarDataHora } from '@/api/datas'
+import type { CartaoTarefa, MotivoArquivamento, StatusTarefa } from '@/api/tarefas'
 
 const Rotulos: Record<StatusTarefa, string> = {
   entrada: 'Entrada',
@@ -42,6 +43,21 @@ export function rotuloDoAndamento(emAndamento: boolean): string {
 /** Cor do Quasar do indicador de andamento. */
 export function corDoAndamento(emAndamento: boolean): string {
   return emAndamento ? 'secondary' : 'grey-7'
+}
+
+/**
+ * Último comentário do cartão, ex.: "Bruno · 04/11/2026 14:30"; só a data e hora quando o autor é desconhecido,
+ * e `null` quando a tarefa não tem comentários.
+ */
+export function ultimoComentarioDoCartao(
+  cartao: Pick<CartaoTarefa, 'ultimoComentarioEm' | 'ultimoComentarioAutor'>,
+): string | null {
+  if (!cartao.ultimoComentarioEm) {
+    return null
+  }
+
+  const quando = formatarDataHora(cartao.ultimoComentarioEm)
+  return cartao.ultimoComentarioAutor ? `${cartao.ultimoComentarioAutor} · ${quando}` : quando
 }
 
 /** Explicação em pt-BR do motivo do arquivamento. */

@@ -768,6 +768,13 @@ export interface components {
             bloqueada: boolean;
             /** @description Whether the task is in progress (`Em andamento`); otherwise it is paused (`Pausada`) */
             emAndamento: boolean;
+            /**
+             * Format: date-time
+             * @description Local date and time of the most recent comment, read or not; `null` when the task has no comments
+             */
+            ultimoComentarioEm: null | string;
+            /** @description Author of the most recent comment; `null` when the task has no comments or the author is unknown */
+            ultimoComentarioAutor: null | string;
         };
         /** @description Configuration state of the Claude API (the key itself is never returned) */
         ClaudeSituacaoResponse: {

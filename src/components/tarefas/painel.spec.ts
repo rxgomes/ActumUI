@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { GruposDoPainel, metadadosDoGrupo } from './grupos'
 import { prazosDoCartao } from './prazos'
+import { ultimoComentarioDoCartao } from './textos'
 
 describe('metadados dos grupos', () => {
   it('lista os oito grupos na ordem do painel, com as concluídas por último', () => {
@@ -44,5 +45,21 @@ describe('prazosDoCartao', () => {
   it('mostra o prazo do Asana na entrada, ainda sem prazo interno', () => {
     expect(prazosDoCartao({ prazoInterno: null, prazoAsana: '2026-11-06', prazoInternoPendente: false }))
       .toEqual({ pendente: false, interno: 'Sem prazo', asana: '06/11/2026' })
+  })
+})
+
+describe('ultimoComentarioDoCartao', () => {
+  it('mostra o autor e a data e hora do último comentário', () => {
+    expect(ultimoComentarioDoCartao({ ultimoComentarioEm: '2026-11-04T14:30:00', ultimoComentarioAutor: 'Bruno' }))
+      .toBe('Bruno · 04/11/2026 14:30')
+  })
+
+  it('mostra só a data e hora quando o autor é desconhecido', () => {
+    expect(ultimoComentarioDoCartao({ ultimoComentarioEm: '2026-11-04T14:30:00', ultimoComentarioAutor: null }))
+      .toBe('04/11/2026 14:30')
+  })
+
+  it('não mostra nada quando a tarefa não tem comentários', () => {
+    expect(ultimoComentarioDoCartao({ ultimoComentarioEm: null, ultimoComentarioAutor: null })).toBeNull()
   })
 })

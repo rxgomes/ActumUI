@@ -24,6 +24,8 @@ const cartaoDaApi = {
   quantidadeRetrabalhos: '2',
   comentariosNaoLidos: 3,
   bloqueada: false,
+  ultimoComentarioEm: '2026-11-04T14:30:00',
+  ultimoComentarioAutor: 'Bruno',
 }
 
 describe('obterPainel', () => {
@@ -40,6 +42,7 @@ describe('obterPainel', () => {
     expect(cartao.quantidadeRetrabalhos).toBe(2)
     expect(cartao.comentariosNaoLidos).toBe(3)
     expect(cartao.titulo).toBe('Devolução de IPI')
+    expect([cartao.ultimoComentarioEm, cartao.ultimoComentarioAutor]).toEqual(['2026-11-04T14:30:00', 'Bruno'])
     expect(painel.hoje).toBe('2026-11-04')
   })
 

@@ -25,6 +25,8 @@ const cartao = {
   comentariosNaoLidos: 0,
   bloqueada: false,
   emAndamento: false,
+  ultimoComentarioEm: null,
+  ultimoComentarioAutor: null,
 }
 
 const painel: Painel = {

@@ -6,7 +6,7 @@ import type { CartaoTarefa } from '@/api/tarefas'
 
 import { temAndamento } from './acoes'
 import { prazosDoCartao } from './prazos'
-import { corDoAndamento, rotuloDoAndamento } from './textos'
+import { corDoAndamento, rotuloDoAndamento, ultimoComentarioDoCartao } from './textos'
 
 const props = defineProps<{
   /** Tarefa exibida no cartão */
@@ -17,6 +17,7 @@ const route = useRoute()
 
 const prazos = computed(() => prazosDoCartao(props.cartao))
 const comAndamento = computed(() => temAndamento(props.cartao.status))
+const ultimoComentario = computed(() => ultimoComentarioDoCartao(props.cartao))
 
 /** Abre o detalhe levando os filtros do Painel, para a volta preservá-los. */
 const destino = computed(() => ({ name: 'detalheTarefa', params: { identifier: props.cartao.identifier }, query: route.query }))
@@ -46,6 +47,10 @@ const destino = computed(() => ({ name: 'detalheTarefa', params: { identifier: p
   
         <div class="titulo text-body2 text-weight-medium">{{ cartao.titulo }}</div>
         <div v-if="cartao.projetos" class="text-caption text-grey-7 ellipsis">{{ cartao.projetos }}</div>
+        <div v-if="ultimoComentario" class="text-caption text-grey-7 ellipsis">
+          <q-icon name="chat" size="14px" /> {{ ultimoComentario }}
+          <q-tooltip>Último comentário</q-tooltip>
+        </div>
       </q-card-section>
   
       <q-space />

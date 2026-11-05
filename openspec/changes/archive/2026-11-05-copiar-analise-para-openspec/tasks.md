@@ -10,4 +10,10 @@
 
 ## 3. Verificação
 
-- [x] 3.1 Com a API rodando e o front em `npm run dev`, numa tarefa analisada, clicar em "Copiar para o OpenSpec" e conferir o texto colado (inclusive numa versão anterior).
+- [x] 3.1 Com a API rodando e o front em `npm run dev`, numa tarefa analisada, clicar em "Copiar para o OpenSpec" e conferir o texto colado (inclusive numa versão anterior):
+  - o texto começa com `/opsx:explore <título da tarefa>` e traz empresa, projetos, link do Asana, versão e data da análise;
+  - as seções aparecem na ordem da tela, com um subtítulo por grupo do checklist;
+  - os trechos vagos aparecem com "Vago:" e as regras com "Origem:";
+  - a notificação "Análise copiada para o OpenSpec." é exibida;
+  - na versão anterior, o texto traz o número dessa versão e omite os blocos que ela não tem (ex.: regras).
+- [x] 3.2 Conferir por testes (`src/api/analises.spec.ts`) o que não apareceu na tarefa verificada no navegador: itens marcados como `- [x]` e a seção "Notas" sempre no fim (incluída depois da verificação no navegador).

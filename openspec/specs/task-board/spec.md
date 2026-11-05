@@ -36,7 +36,7 @@ O Painel SHALL exibir, acima das seções, um resumo com a quantidade de tarefas
 - **THEN** o resumo MUST mostrar Retrabalho 2, Atrasadas 3 e Hoje 0
 
 ### Requirement: Cartão da tarefa
-Cada tarefa SHALL ser exibida num cartão com título, nome e cor da empresa, projetos, prazo interno, prioridade, quantidade de retrabalhos e de comentários não lidos e a indicação de bloqueada.
+Cada tarefa SHALL ser exibida num cartão com título, nome e cor da empresa, projetos, prazo interno, prioridade, quantidade de retrabalhos e de comentários não lidos, a indicação de bloqueada e, quando a tarefa tem comentários, a data e hora e o autor do último comentário.
 
 #### Scenario: Tarefa reaberta com comentários
 - **WHEN** uma tarefa tem `quantidadeRetrabalhos = 2` e `comentariosNaoLidos = 3`
@@ -49,6 +49,18 @@ Cada tarefa SHALL ser exibida num cartão com título, nome e cor da empresa, pr
 #### Scenario: Cor da empresa
 - **WHEN** a tarefa é da empresa Aureum-ERP com a cor `#388E3C`
 - **THEN** o cartão MUST mostrar o nome "Aureum-ERP" identificado com essa cor
+
+#### Scenario: Último comentário
+- **WHEN** a tarefa tem `ultimoComentarioEm = 2026-11-04T14:30:00` e `ultimoComentarioAutor = "Bruno"`
+- **THEN** o cartão MUST mostrar "Bruno" e "04/11/2026 14:30", identificados como o último comentário
+
+#### Scenario: Último comentário sem autor
+- **WHEN** a tarefa tem `ultimoComentarioEm = 2026-11-04T14:30:00` e `ultimoComentarioAutor` nulo
+- **THEN** o cartão MUST mostrar só "04/11/2026 14:30", identificado como o último comentário
+
+#### Scenario: Tarefa sem comentários
+- **WHEN** a tarefa tem `ultimoComentarioEm` nulo
+- **THEN** o cartão MUST NOT mostrar a informação de último comentário
 
 ### Requirement: Prazos no cartão
 O cartão SHALL mostrar o prazo interno no formato `dd/MM/yyyy` e MUST mostrar o prazo do Asana somente quando ele for diferente do prazo interno. Quando o prazo interno estiver pendente após uma reabertura, o cartão MUST indicar que o novo prazo precisa ser definido.

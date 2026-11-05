@@ -19,7 +19,7 @@ function detalhe(comentarios: Comentario[]): TarefaDetalhe {
   return {
     identifier: 't1', titulo: 'Tarefa', descricao: '', descricaoHtml: '', projetos: '', linkAsana: '',
     empresa: { identifier: 'e1', nome: 'Aureum-ERP', cor: '#388E3C' },
-    status: 'retrabalho', statusAnterior: null, prazoInterno: null, prazoInternoPendente: false, prazoAsana: null,
+    status: 'retrabalho', statusAnterior: null, emAndamento: false, prazoInterno: null, prazoInternoPendente: false, prazoAsana: null,
     prioridade: null, concluidaEm: null, arquivadaEm: null, motivoArquivamento: null, sincronizadaEm: '2026-11-03T15:32:00',
     branches: [], retrabalhos: [], comentarios,
   }

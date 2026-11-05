@@ -3,7 +3,7 @@ import { useQuasar } from 'quasar'
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
-import { type Branch, bloquearTarefa, desbloquearTarefa, removerBranch } from '@/api/tarefas'
+import { type Branch, bloquearTarefa, desbloquearTarefa, pausarTarefa, removerBranch, retomarTarefa } from '@/api/tarefas'
 import type { AcaoDaTarefa } from '@/components/tarefas/acoes'
 import AnotacoesDaTarefa from '@/components/tarefas/AnotacoesDaTarefa.vue'
 import AnaliseDaTarefa from '@/components/tarefas/AnaliseDaTarefa.vue'
@@ -54,16 +54,18 @@ async function aposAcao(mensagem: string): Promise<void> {
   await tarefa.recarregar()
 }
 
-async function executarDireto(acao: 'bloquear' | 'desbloquear'): Promise<void> {
+const AcoesDiretas = {
+  iniciar: { executar: retomarTarefa, mensagem: 'Tarefa em andamento.' },
+  pausar: { executar: pausarTarefa, mensagem: 'Tarefa pausada.' },
+  bloquear: { executar: bloquearTarefa, mensagem: 'Tarefa bloqueada.' },
+  desbloquear: { executar: desbloquearTarefa, mensagem: 'Tarefa desbloqueada.' },
+} as const
+
+async function executarDireto(acao: keyof typeof AcoesDiretas): Promise<void> {
   executando.value = acao
   try {
-    if (acao === 'bloquear') {
-      await bloquearTarefa(identifier.value)
-      await aposAcao('Tarefa bloqueada.')
-    } else {
-      await desbloquearTarefa(identifier.value)
-      await aposAcao('Tarefa desbloqueada.')
-    }
+    await AcoesDiretas[acao].executar(identifier.value)
+    await aposAcao(AcoesDiretas[acao].mensagem)
   } catch (erro) {
     notificarErro(erro)
   } finally {
@@ -74,7 +76,12 @@ async function executarDireto(acao: 'bloquear' | 'desbloquear'): Promise<void> {
 function aoEscolherAcao(acao: AcaoDaTarefa): void {
   switch (acao) {
     case 'iniciar':
-      iniciarAberto.value = true
+      // Da entrada, pede as branches e o prazo; pausada, retoma direto.
+      if (tarefa.detalhe?.status === 'entrada') {
+        iniciarAberto.value = true
+      } else {
+        void executarDireto('iniciar')
+      }
       break
     case 'novoPrazo':
       novoPrazoAberto.value = true
@@ -85,6 +92,7 @@ function aoEscolherAcao(acao: AcaoDaTarefa): void {
     case 'concluir':
       concluirAberto.value = true
       break
+    case 'pausar':
     case 'bloquear':
     case 'desbloquear':
       void executarDireto(acao)

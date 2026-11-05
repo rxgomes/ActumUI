@@ -15,7 +15,7 @@ export interface CartaoTarefa extends Omit<CartaoDaApi, 'prioridade' | 'quantida
   comentariosNaoLidos: number
 }
 
-/** Um grupo do painel (`retrabalho`, `entrada`, `atrasadas`, `hoje`, `esta_semana`, `proximas`, `sem_prazo`). */
+/** Um grupo do painel (`retrabalho`, `entrada`, `atrasadas`, `hoje`, `esta_semana`, `proximas`, `sem_prazo`, `concluidas`). */
 export interface GrupoDoPainel {
   grupo: string
   tarefas: CartaoTarefa[]
@@ -27,10 +27,23 @@ export interface Painel {
   grupos: GrupoDoPainel[]
 }
 
+/** Status que podem aparecer no painel (as arquivadas nunca aparecem), na ordem do filtro. */
+export const StatusDoPainel = ['entrada', 'em_andamento', 'bloqueada', 'retrabalho', 'concluida'] as const satisfies readonly StatusTarefa[]
+
+/** Um status aceito pelo filtro do painel. */
+export type StatusDoPainel = (typeof StatusDoPainel)[number]
+
+/** Se o texto (ex.: lido do endereço) é um status aceito pelo filtro do painel. */
+export function ehStatusDoPainel(valor: string): valor is StatusDoPainel {
+  return (StatusDoPainel as readonly string[]).includes(valor)
+}
+
 /** Filtros do painel; valores vazios não são enviados. */
 export interface FiltrosDoPainel {
   /** Identifier da empresa */
   empresa?: string
+  /** Status da tarefa */
+  status?: StatusDoPainel
   /** Texto buscado no título e na descrição */
   busca?: string
 }
@@ -40,6 +53,10 @@ export async function obterPainel(filtros: FiltrosDoPainel = {}): Promise<Painel
   const query: FiltrosDoPainel = {}
   if (filtros.empresa) {
     query.empresa = filtros.empresa
+  }
+
+  if (filtros.status) {
+    query.status = filtros.status
   }
 
   const busca = filtros.busca?.trim()
@@ -144,6 +161,16 @@ export async function iniciarTarefa(identifier: string, dados: DadosParaIniciar)
     params: { path: { identifier } },
     body: { branchBase: dados.branchBase, branchImplementacao: dados.branchImplementacao, prazoInterno: dados.prazoInterno },
   }))
+}
+
+/** Põe em andamento uma tarefa pausada (já iniciada ou em retrabalho). */
+export async function retomarTarefa(identifier: string): Promise<void> {
+  await executar(() => cliente.POST('/tarefas/{identifier}/retomar', { params: { path: { identifier } } }))
+}
+
+/** Pausa uma tarefa em andamento. */
+export async function pausarTarefa(identifier: string): Promise<void> {
+  await executar(() => cliente.POST('/tarefas/{identifier}/pausar', { params: { path: { identifier } } }))
 }
 
 /** Bloqueia uma tarefa em andamento ou em retrabalho. */

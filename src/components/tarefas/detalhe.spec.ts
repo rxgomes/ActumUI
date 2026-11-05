@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest'
 
 import type { StatusTarefa } from '@/api/tarefas'
 
-import { acoesDisponiveis } from './acoes'
-import { corDoStatus, rotuloDoStatus, textoDoMotivoArquivamento } from './textos'
+import { acoesDisponiveis, temAndamento } from './acoes'
+import { corDoStatus, rotuloDoAndamento, rotuloDoStatus, textoDoMotivoArquivamento } from './textos'
 
-function acoes(status: StatusTarefa): string[] {
-  return [...acoesDisponiveis(status)].sort()
+function acoes(status: StatusTarefa, emAndamento = false): string[] {
+  return [...acoesDisponiveis(status, emAndamento)].sort()
 }
 
 describe('acoesDisponiveis', () => {
@@ -14,12 +14,21 @@ describe('acoesDisponiveis', () => {
     expect(acoes('entrada')).toEqual(['iniciar', 'novoPrazo'])
   })
 
-  it('em andamento, oferece Bloquear, Nova branch, Concluir e Novo prazo', () => {
-    expect(acoes('em_andamento')).toEqual(['bloquear', 'concluir', 'novaBranch', 'novoPrazo'])
+  it('iniciada e pausada, oferece Iniciar, Bloquear, Nova branch, Concluir e Novo prazo', () => {
+    expect(acoes('em_andamento')).toEqual(['bloquear', 'concluir', 'iniciar', 'novaBranch', 'novoPrazo'])
   })
 
-  it('em retrabalho, oferece as mesmas ações de em andamento', () => {
+  it('em andamento, troca Iniciar por Pausar', () => {
+    expect(acoes('em_andamento', true)).toEqual(['bloquear', 'concluir', 'novaBranch', 'novoPrazo', 'pausar'])
+  })
+
+  it('em retrabalho, oferece as mesmas ações da tarefa iniciada', () => {
     expect(acoes('retrabalho')).toEqual(acoes('em_andamento'))
+    expect(acoes('retrabalho', true)).toEqual(acoes('em_andamento', true))
+  })
+
+  it('bloqueada, não oferece Iniciar nem Pausar', () => {
+    expect(acoes('bloqueada', true)).toEqual(acoes('bloqueada'))
   })
 
   it('bloqueada, oferece Desbloquear, Nova branch, Concluir e Novo prazo', () => {
@@ -37,9 +46,15 @@ describe('acoesDisponiveis', () => {
 
 describe('textos', () => {
   it('traduz os status para pt-BR', () => {
-    expect(rotuloDoStatus('em_andamento')).toBe('Em andamento')
+    expect(rotuloDoStatus('em_andamento')).toBe('Iniciada')
     expect(rotuloDoStatus('concluida')).toBe('Concluída')
     expect(corDoStatus('retrabalho')).toBe('warning')
+  })
+
+  it('nomeia o andamento só nos status em que ele se aplica', () => {
+    expect([rotuloDoAndamento(true), rotuloDoAndamento(false)]).toEqual(['Em andamento', 'Pausada'])
+    const status: StatusTarefa[] = ['entrada', 'em_andamento', 'retrabalho', 'bloqueada', 'concluida']
+    expect(status.filter(temAndamento)).toEqual(['em_andamento', 'retrabalho'])
   })
 
   it('explica os motivos de arquivamento', () => {

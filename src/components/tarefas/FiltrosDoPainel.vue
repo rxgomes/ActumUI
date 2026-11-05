@@ -2,10 +2,13 @@
 import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import { StatusDoPainel } from '@/api/tarefas'
 import { useNotificarErro } from '@/composables/useNotificarErro'
 import { usePainelStore } from '@/stores/painel'
 
-interface OpcaoDeEmpresa {
+import { corDoStatus, rotuloDoStatus } from './textos'
+
+interface OpcaoDoFiltro {
   label: string
   value: string | null
   cor: string | null
@@ -16,7 +19,13 @@ const router = useRouter()
 const painel = usePainelStore()
 const notificarErro = useNotificarErro()
 
-const opcoes = computed<OpcaoDeEmpresa[]>(() => [
+/** Opções do filtro de status; "Iniciada" é o status `em_andamento` (em andamento ou pausada). */
+const opcoesDeStatus: OpcaoDoFiltro[] = [
+  { label: 'Todos os status', value: null, cor: null },
+  ...StatusDoPainel.map((status) => ({ label: rotuloDoStatus(status), value: status, cor: corDoStatus(status) })),
+]
+
+const opcoes = computed<OpcaoDoFiltro[]>(() => [
   { label: 'Todas as empresas', value: null, cor: null },
   ...painel.empresas.map((empresa) => ({ label: empresa.nome, value: empresa.identifier, cor: empresa.cor })),
 ])
@@ -25,6 +34,11 @@ const opcoes = computed<OpcaoDeEmpresa[]>(() => [
 const empresa = computed({
   get: () => textoDaQuery('empresa'),
   set: (valor: string | null) => atualizarQuery('empresa', valor),
+})
+
+const status = computed({
+  get: () => textoDaQuery('status'),
+  set: (valor: string | null) => atualizarQuery('status', valor),
 })
 
 const busca = computed({
@@ -76,6 +90,20 @@ onMounted(async () => {
           <q-item v-bind="itemProps">
             <q-item-section avatar>
               <q-icon v-if="opt.cor" name="circle" size="14px" :style="{ color: opt.cor }" />
+              <q-icon v-else name="apps" size="14px" color="grey-6" />
+            </q-item-section>
+            <q-item-section>{{ opt.label }}</q-item-section>
+          </q-item>
+        </template>
+      </q-select>
+    </div>
+
+    <div class="col-12 col-sm-5 col-md-3">
+      <q-select v-model="status" :options="opcoesDeStatus" emit-value map-options outlined dense bg-color="white" label="Status">
+        <template #option="{ itemProps, opt }">
+          <q-item v-bind="itemProps">
+            <q-item-section avatar>
+              <q-icon v-if="opt.cor" name="circle" size="14px" :color="opt.cor" />
               <q-icon v-else name="apps" size="14px" color="grey-6" />
             </q-item-section>
             <q-item-section>{{ opt.label }}</q-item-section>

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { cliente } from './cliente'
-import { obterPainel } from './tarefas'
+import { ehStatusDoPainel, obterPainel } from './tarefas'
 
 vi.mock('./cliente', () => ({ cliente: { GET: vi.fn() } }))
 
@@ -52,9 +52,13 @@ describe('obterPainel', () => {
   })
 
   it('envia os filtros informados, com a busca sem espaços nas pontas', async () => {
-    await obterPainel({ empresa: 'abc', busca: '  devolucao ' })
+    await obterPainel({ empresa: 'abc', status: 'bloqueada', busca: '  devolucao ' })
 
-    expect(get).toHaveBeenCalledWith('/tarefas/painel', { params: { query: { empresa: 'abc', busca: 'devolucao' } } })
+    expect(get).toHaveBeenCalledWith('/tarefas/painel', { params: { query: { empresa: 'abc', status: 'bloqueada', busca: 'devolucao' } } })
+  })
+
+  it('reconhece só os status que podem estar no painel', () => {
+    expect(['entrada', 'concluida', 'arquivada', 'xyz'].filter(ehStatusDoPainel)).toEqual(['entrada', 'concluida'])
   })
 
   it('omite os filtros vazios', async () => {

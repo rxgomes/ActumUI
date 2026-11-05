@@ -20,7 +20,7 @@ export const usePainelStore = defineStore('painel', () => {
     Object.fromEntries((painel.value?.grupos ?? []).map((grupo) => [grupo.grupo, grupo.tarefas.length])),
   )
 
-  /** Total de tarefas abertas no painel atual. */
+  /** Total de tarefas no painel atual (abertas e concluídas pelo Actum). */
   const total = computed(() => Object.values(contagemPorGrupo.value).reduce((soma, quantidade) => soma + quantidade, 0))
 
   /**

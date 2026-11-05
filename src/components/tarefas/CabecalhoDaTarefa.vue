@@ -4,15 +4,15 @@ import type { RouteLocationRaw } from 'vue-router'
 
 import type { TarefaDetalhe } from '@/api/tarefas'
 
-import { type AcaoDaTarefa, acoesDisponiveis } from './acoes'
-import { corDoStatus, rotuloDoStatus } from './textos'
+import { type AcaoDaTarefa, acoesDisponiveis, temAndamento } from './acoes'
+import { corDoAndamento, corDoStatus, rotuloDoAndamento, rotuloDoStatus } from './textos'
 
 const props = defineProps<{
   /** Tarefa exibida */
   detalhe: TarefaDetalhe
   /** Destino do botão Voltar (Painel com os filtros de antes) */
   voltarPara: RouteLocationRaw
-  /** Ação executada diretamente (bloquear/desbloquear) em andamento, para o loading do botão */
+  /** Ação executada diretamente (iniciar/pausar/bloquear/desbloquear) em andamento, para o loading do botão */
   executando: AcaoDaTarefa | null
 }>()
 
@@ -21,10 +21,12 @@ const emit = defineEmits<{
   acao: [acao: AcaoDaTarefa]
 }>()
 
-const acoes = computed(() => acoesDisponiveis(props.detalhe.status))
+const acoes = computed(() => acoesDisponiveis(props.detalhe.status, props.detalhe.emAndamento))
+const comAndamento = computed(() => temAndamento(props.detalhe.status))
 
 const botoes: { acao: AcaoDaTarefa; rotulo: string; icone: string; destaque: boolean }[] = [
   { acao: 'iniciar', rotulo: 'Iniciar', icone: 'play_arrow', destaque: true },
+  { acao: 'pausar', rotulo: 'Pausar', icone: 'pause', destaque: false },
   { acao: 'concluir', rotulo: 'Concluir', icone: 'task_alt', destaque: true },
   { acao: 'novoPrazo', rotulo: 'Novo prazo', icone: 'event', destaque: false },
   { acao: 'novaBranch', rotulo: 'Nova branch', icone: 'call_split', destaque: false },
@@ -32,7 +34,12 @@ const botoes: { acao: AcaoDaTarefa; rotulo: string; icone: string; destaque: boo
   { acao: 'desbloquear', rotulo: 'Desbloquear', icone: 'lock_open', destaque: false },
 ]
 
-const botoesDisponiveis = computed(() => botoes.filter((botao) => acoes.value.has(botao.acao)))
+/** Iniciar e Pausar aparecem juntos quando a tarefa tem andamento; o que não se aplica fica desabilitado. */
+function visivel(acao: AcaoDaTarefa): boolean {
+  return acoes.value.has(acao) || (comAndamento.value && (acao === 'iniciar' || acao === 'pausar'))
+}
+
+const botoesVisiveis = computed(() => botoes.filter((botao) => visivel(botao.acao)))
 </script>
 
 <template>
@@ -43,7 +50,19 @@ const botoesDisponiveis = computed(() => botoes.filter((botao) => acoes.value.ha
       <div class="col-12 col-md">
         <div class="row items-center q-gutter-sm q-mb-xs">
           <q-chip dense square text-color="white" class="q-ml-none" :style="{ backgroundColor: detalhe.empresa.cor }" :label="detalhe.empresa.nome" />
-          <q-badge :color="corDoStatus(detalhe.status)" :label="rotuloDoStatus(detalhe.status)" class="text-body2 q-px-sm" />
+          <!-- "Iniciada" é redundante ao lado de Em andamento/Pausada; os demais status continuam visíveis. -->
+          <q-badge
+            v-if="detalhe.status !== 'em_andamento'"
+            :color="corDoStatus(detalhe.status)"
+            :label="rotuloDoStatus(detalhe.status)"
+            class="text-body2 q-px-sm"
+          />
+          <q-badge
+            v-if="comAndamento"
+            :color="corDoAndamento(detalhe.emAndamento)"
+            :label="rotuloDoAndamento(detalhe.emAndamento)"
+            class="text-body2 q-px-sm"
+          />
           <a :href="detalhe.linkAsana" target="_blank" rel="noopener" class="text-secondary text-caption row items-center no-wrap">
             Abrir no Asana <q-icon name="open_in_new" size="14px" class="q-ml-xs" />
           </a>
@@ -51,9 +70,9 @@ const botoesDisponiveis = computed(() => botoes.filter((botao) => acoes.value.ha
         <h1 class="text-h5 text-weight-bold q-my-none">{{ detalhe.titulo }}</h1>
       </div>
 
-      <div v-if="botoesDisponiveis.length > 0" class="col-12 col-md-auto row q-gutter-sm justify-end">
+      <div v-if="botoesVisiveis.length > 0" class="col-12 col-md-auto row q-gutter-sm justify-end">
         <q-btn
-          v-for="botao in botoesDisponiveis"
+          v-for="botao in botoesVisiveis"
           :key="botao.acao"
           :unelevated="botao.destaque"
           :outline="!botao.destaque"
@@ -62,7 +81,7 @@ const botoesDisponiveis = computed(() => botoes.filter((botao) => acoes.value.ha
           :icon="botao.icone"
           :label="botao.rotulo"
           :loading="executando === botao.acao"
-          :disable="executando !== null && executando !== botao.acao"
+          :disable="!acoes.has(botao.acao) || (executando !== null && executando !== botao.acao)"
           @click="emit('acao', botao.acao)"
         />
       </div>

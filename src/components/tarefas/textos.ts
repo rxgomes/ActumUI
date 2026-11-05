@@ -2,7 +2,7 @@ import type { MotivoArquivamento, StatusTarefa } from '@/api/tarefas'
 
 const Rotulos: Record<StatusTarefa, string> = {
   entrada: 'Entrada',
-  em_andamento: 'Em andamento',
+  em_andamento: 'Iniciada',
   bloqueada: 'Bloqueada',
   concluida: 'Concluída',
   retrabalho: 'Retrabalho',
@@ -24,7 +24,7 @@ const Motivos: Record<MotivoArquivamento, string> = {
   excluida: 'A tarefa foi excluída no Asana.',
 }
 
-/** Nome do status em pt-BR, ex.: `em_andamento` → "Em andamento". */
+/** Nome do status em pt-BR, ex.: `em_andamento` → "Iniciada" (o andamento tem rótulo próprio). */
 export function rotuloDoStatus(status: StatusTarefa): string {
   return Rotulos[status] ?? status
 }
@@ -32,6 +32,16 @@ export function rotuloDoStatus(status: StatusTarefa): string {
 /** Cor do Quasar usada para o status. */
 export function corDoStatus(status: StatusTarefa): string {
   return Cores[status] ?? 'grey'
+}
+
+/** Rótulo do indicador de andamento: "Em andamento" ou "Pausada". */
+export function rotuloDoAndamento(emAndamento: boolean): string {
+  return emAndamento ? 'Em andamento' : 'Pausada'
+}
+
+/** Cor do Quasar do indicador de andamento. */
+export function corDoAndamento(emAndamento: boolean): string {
+  return emAndamento ? 'secondary' : 'grey-7'
 }
 
 /** Explicação em pt-BR do motivo do arquivamento. */

@@ -4,9 +4,9 @@ import { GruposDoPainel, metadadosDoGrupo } from './grupos'
 import { prazosDoCartao } from './prazos'
 
 describe('metadados dos grupos', () => {
-  it('lista os sete grupos na ordem do painel', () => {
+  it('lista os oito grupos na ordem do painel, com as concluídas por último', () => {
     expect(GruposDoPainel.map((grupo) => grupo.rotulo)).toEqual(
-      ['Retrabalho', 'Entrada', 'Atrasadas', 'Hoje', 'Esta semana', 'Próximas', 'Sem prazo'],
+      ['Retrabalho', 'Entrada', 'Atrasadas', 'Hoje', 'Esta semana', 'Próximas', 'Sem prazo', 'Concluídas'],
     )
   })
 

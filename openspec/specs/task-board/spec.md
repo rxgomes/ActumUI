@@ -2,12 +2,12 @@
 
 ## Purpose
 
-Define como o front exibe o painel de tarefas: os grupos devolvidos pela API, os dados de cada cartão, os filtros por empresa e texto e os estados da tela, para o usuário ver o que fazer primeiro.
+Define como o front exibe o painel de tarefas: os grupos devolvidos pela API, os dados de cada cartão, os filtros por empresa, status e texto e os estados da tela, para o usuário ver o que fazer primeiro.
 
 ## Requirements
 
 ### Requirement: Grupos do painel
-O Painel SHALL exibir os grupos Retrabalho, Entrada, Atrasadas, Hoje, Esta semana, Próximas e Sem prazo, nessa ordem, com as tarefas que a API devolve em cada grupo e na ordem recebida. O front MUST NOT reagrupar nem reordenar as tarefas.
+O Painel SHALL exibir os grupos Retrabalho, Entrada, Atrasadas, Hoje, Esta semana, Próximas, Sem prazo e Concluídas (tarefas concluídas pelo Actum), nessa ordem, com as tarefas que a API devolve em cada grupo e na ordem recebida. O front MUST NOT reagrupar nem reordenar as tarefas.
 
 #### Scenario: Tarefas nos grupos
 - **WHEN** a API devolve uma tarefa no grupo `atrasadas` e duas no grupo `hoje`
@@ -68,6 +68,13 @@ O cartão SHALL mostrar o prazo interno no formato `dd/MM/yyyy` e MUST mostrar o
 #### Scenario: Sem prazo interno
 - **WHEN** a tarefa não tem prazo interno nem prazo do Asana
 - **THEN** o cartão MUST indicar que está sem prazo
+
+### Requirement: Filtro por status
+O Painel SHALL permitir filtrar por um status (Entrada, Iniciada, Bloqueada, Retrabalho ou Concluída) ou mostrar todos. O status escolhido MUST ser enviado à API, e o filtro MUST ser mantido no endereço da página; um status desconhecido no endereço MUST ser ignorado.
+
+#### Scenario: Escolher um status
+- **WHEN** o usuário escolhe o status Retrabalho
+- **THEN** o painel MUST ser recarregado só com as tarefas em retrabalho, e o endereço MUST incluir `status=retrabalho`
 
 ### Requirement: Filtro por empresa
 O Painel SHALL permitir filtrar por uma empresa, escolhida entre as empresas devolvidas pela API, ou mostrar todas. A empresa escolhida MUST ser enviada à API, e o filtro MUST ser mantido no endereço da página.

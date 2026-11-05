@@ -24,6 +24,7 @@ const cartao = {
   quantidadeRetrabalhos: 0,
   comentariosNaoLidos: 0,
   bloqueada: false,
+  emAndamento: false,
 }
 
 const painel: Painel = {

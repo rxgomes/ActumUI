@@ -2,7 +2,7 @@
 import { computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
-import type { FiltrosDoPainel } from '@/api/tarefas'
+import { ehStatusDoPainel, type FiltrosDoPainel } from '@/api/tarefas'
 import PaginaCabecalho from '@/components/PaginaCabecalho.vue'
 import BarraDeSincronizacao from '@/components/tarefas/BarraDeSincronizacao.vue'
 import FiltrosDoPainelComponente from '@/components/tarefas/FiltrosDoPainel.vue'
@@ -18,10 +18,11 @@ const notificarErro = useNotificarErro()
 /** Filtros lidos do endereço da página (fonte única, gravada por FiltrosDoPainel). */
 const filtros = computed<FiltrosDoPainel>(() => ({
   empresa: textoDaQuery('empresa'),
+  status: statusDaQuery(),
   busca: textoDaQuery('busca'),
 }))
 
-const temFiltros = computed(() => Boolean(filtros.value.empresa || filtros.value.busca))
+const temFiltros = computed(() => Boolean(filtros.value.empresa || filtros.value.status || filtros.value.busca))
 
 const primeiraCarga = computed(() => painel.painel === null && painel.carregando)
 const erroSemDados = computed(() => painel.painel === null && painel.erro !== null && !painel.carregando)
@@ -30,6 +31,12 @@ const vazio = computed(() => painel.painel !== null && painel.total === 0)
 function textoDaQuery(chave: string): string | undefined {
   const valor = route.query[chave]
   return typeof valor === 'string' && valor.length > 0 ? valor : undefined
+}
+
+/** Status do endereço; um valor desconhecido é ignorado. */
+function statusDaQuery(): FiltrosDoPainel['status'] {
+  const valor = textoDaQuery('status')
+  return valor !== undefined && ehStatusDoPainel(valor) ? valor : undefined
 }
 
 watch(filtros, (novos) => void painel.carregar(novos), { immediate: true, deep: true })
@@ -62,7 +69,7 @@ watch(
 
     <template v-if="primeiraCarga">
       <div class="row q-col-gutter-md q-mb-lg">
-        <div v-for="n in 7" :key="n" class="col-6 col-sm-4 col-md">
+        <div v-for="n in 8" :key="n" class="col-6 col-sm-4 col-md">
           <q-skeleton type="rect" height="72px" class="rounded-borders" />
         </div>
       </div>

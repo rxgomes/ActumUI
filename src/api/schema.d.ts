@@ -133,7 +133,7 @@ export interface paths {
         };
         /**
          * Painel de tarefas
-         * @description Devolve as tarefas não concluídas e não arquivadas nos grupos retrabalho, entrada, atrasadas, hoje, esta_semana (até domingo), proximas e sem_prazo, nessa ordem e sempre presentes. Filtros opcionais por empresa e texto (título ou descrição, sem diferenciar maiúsculas e acentos).
+         * @description Devolve as tarefas não arquivadas nos grupos retrabalho, entrada, atrasadas, hoje, esta_semana (até domingo), proximas, sem_prazo e concluidas (concluídas pelo Actum, a mais recente primeiro), nessa ordem e sempre presentes. Filtros opcionais por empresa, status (entrada, em_andamento, bloqueada, retrabalho ou concluida) e texto (título ou descrição, sem diferenciar maiúsculas e acentos).
          */
         get: operations["ObterPainel"];
         put?: never;
@@ -222,6 +222,46 @@ export interface paths {
          * @description Inicia uma tarefa da entrada com a branch base, a branch de implementação (diferentes) e o prazo interno. As branches só são enviadas ao Asana na conclusão.
          */
         post: operations["IniciarTarefa"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tarefas/{identifier}/retomar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retomar tarefa (Em andamento)
+         * @description Põe em andamento uma tarefa pausada, já iniciada ou em retrabalho. Tarefas bloqueadas precisam ser desbloqueadas antes. Nada é enviado ao Asana.
+         */
+        post: operations["RetomarTarefa"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tarefas/{identifier}/pausar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pausar tarefa
+         * @description Pausa uma tarefa em andamento. Nada é enviado ao Asana.
+         */
+        post: operations["PausarTarefa"];
         delete?: never;
         options?: never;
         head?: never;
@@ -726,6 +766,8 @@ export interface components {
             comentariosNaoLidos: number | string;
             /** @description Whether the task is blocked */
             bloqueada: boolean;
+            /** @description Whether the task is in progress (`Em andamento`); otherwise it is paused (`Pausada`) */
+            emAndamento: boolean;
         };
         /** @description Configuration state of the Claude API (the key itself is never returned) */
         ClaudeSituacaoResponse: {
@@ -821,7 +863,7 @@ export interface components {
         };
         /** @description One board group */
         GrupoPainelResponse: {
-            /** @description Group id (`retrabalho`, `entrada`, `atrasadas`, `hoje`, `esta_semana`, `proximas`, `sem_prazo`) */
+            /** @description Group id (`retrabalho`, `entrada`, `atrasadas`, `hoje`, `esta_semana`, `proximas`, `sem_prazo`, `concluidas`) */
             grupo: string;
             /** @description Tasks of the group, in display order; empty when there is none */
             tarefas: components["schemas"]["CartaoTarefaResponse"][];
@@ -945,7 +987,7 @@ export interface components {
              */
             totalCount: number | string;
         };
-        /** @description Board: open tasks grouped by what to do first */
+        /** @description Board: open tasks grouped by what to do first, then the tasks completed by the Actum */
         PainelResponse: {
             /**
              * Format: date
@@ -954,7 +996,7 @@ export interface components {
             hoje: string;
             /**
              * @description Every group, always present and in this order: `retrabalho`, `entrada`, `atrasadas`, `hoje`,
-             *     `esta_semana`, `proximas`, `sem_prazo`
+             *     `esta_semana`, `proximas`, `sem_prazo`, `concluidas` (completed by the Actum, most recent first)
              */
             grupos: components["schemas"]["GrupoPainelResponse"][];
         };
@@ -1110,6 +1152,8 @@ export interface components {
             /** @description Internal status (`entrada`, `em_andamento`, `bloqueada`, `concluida`, `retrabalho`, `arquivada`) */
             status: components["schemas"]["StatusTarefa"];
             statusAnterior: null | components["schemas"]["StatusTarefa"];
+            /** @description Whether the task is in progress (`Em andamento`); otherwise it is paused (`Pausada`) */
+            emAndamento: boolean;
             /**
              * Format: date
              * @description Internal due date
@@ -1157,6 +1201,8 @@ export interface components {
             /** @description Internal status */
             status: components["schemas"]["StatusTarefa"];
             statusAnterior: null | components["schemas"]["StatusTarefa"];
+            /** @description Whether the task is in progress (`Em andamento`); otherwise it is paused (`Pausada`) */
+            emAndamento: boolean;
             /**
              * Format: date
              * @description Internal due date
@@ -1433,6 +1479,7 @@ export interface operations {
         parameters: {
             query?: {
                 empresa?: string;
+                status?: string;
                 busca?: string;
             };
             header?: never;
@@ -1614,6 +1661,86 @@ export interface operations {
                 "application/json": components["schemas"]["IniciarTarefaRequest"];
             };
         };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TarefaCicloResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    RetomarTarefa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TarefaCicloResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    PausarTarefa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description OK */
             200: {

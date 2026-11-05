@@ -15,6 +15,7 @@ export const GruposDoPainel: readonly MetadadosDoGrupo[] = [
   { grupo: 'esta_semana', rotulo: 'Esta semana', icone: 'date_range', cor: 'light-blue' },
   { grupo: 'proximas', rotulo: 'Próximas', icone: 'event', cor: 'teal' },
   { grupo: 'sem_prazo', rotulo: 'Sem prazo', icone: 'event_available', cor: 'grey' },
+  { grupo: 'concluidas', rotulo: 'Concluídas', icone: 'task_alt', cor: 'positive' },
 ]
 
 /**

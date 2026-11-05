@@ -4,7 +4,9 @@ import { useRoute } from 'vue-router'
 
 import type { CartaoTarefa } from '@/api/tarefas'
 
+import { temAndamento } from './acoes'
 import { prazosDoCartao } from './prazos'
+import { corDoAndamento, rotuloDoAndamento } from './textos'
 
 const props = defineProps<{
   /** Tarefa exibida no cartão */
@@ -14,6 +16,7 @@ const props = defineProps<{
 const route = useRoute()
 
 const prazos = computed(() => prazosDoCartao(props.cartao))
+const comAndamento = computed(() => temAndamento(props.cartao.status))
 
 /** Abre o detalhe levando os filtros do Painel, para a volta preservá-los. */
 const destino = computed(() => ({ name: 'detalheTarefa', params: { identifier: props.cartao.identifier }, query: route.query }))
@@ -24,14 +27,13 @@ const destino = computed(() => ({ name: 'detalheTarefa', params: { identifier: p
     <q-card flat bordered class="cartao-tarefa column">
       <q-card-section class="q-pb-xs">
         <div class="row items-center no-wrap q-gutter-xs q-mb-xs">
-          <q-chip
-            dense
-            square
-            size="sm"
-            text-color="white"
-            class="q-ml-none"
-            :style="{ backgroundColor: cartao.empresa.cor }"
-            :label="cartao.empresa.nome"
+          <!-- Mesmo tamanho do badge de andamento ao lado. -->
+          <q-badge text-color="white" class="q-ml-none" :style="{ backgroundColor: cartao.empresa.cor }" :label="cartao.empresa.nome" />
+          <q-badge
+            v-if="comAndamento"
+            :outline="!cartao.emAndamento"
+            :color="corDoAndamento(cartao.emAndamento)"
+            :label="rotuloDoAndamento(cartao.emAndamento)"
           />
           <q-space />
           <q-badge v-if="cartao.prioridade !== null" outline color="primary" :label="`P${cartao.prioridade}`">

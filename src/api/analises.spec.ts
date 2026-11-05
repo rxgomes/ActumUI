@@ -104,14 +104,18 @@ describe('funções da análise', () => {
       expect(texto).toContain('## Testes\n\n- [ ] texto t1\n')
       expect(texto).toContain('## Dúvidas para o solicitante\n\n- [ ] texto d1\n- [ ] texto d2\n')
       expect(texto).toContain('## Regras e observações\n\n- [ ] texto r1\n  - Origem: comentário de Maria em 04/11/2026 14:30\n')
-      const ordem = ['## Objetivo', '## Checklist', '## Testes', '## Dúvidas', '## Regras', '## Notas'].map((titulo) => texto.indexOf(titulo))
+      const ordem = ['## Objetivo', '## Checklist', '## Testes', '## Dúvidas', '## Regras', '## Locais', '## Notas'].map((titulo) => texto.indexOf(titulo))
       expect(ordem).toEqual([...ordem].sort((a, b) => a - b))
     })
 
-    it('termina sempre com as notas para a exploração', () => {
+    it('termina sempre com os locais do código e as notas para a exploração', () => {
+      const locais =
+        '## Locais\n\n- Front: D:\\Aureum\\erp-frontend\\erp-aureum\\src\\pages\\\n' +
+        '- Back:  Z:\\Aureum\\erp-backend\\Source\\ErpAureum\\ErpAureum\\\n' +
+        '- Varrer os endpoints que alimentam essa lista\n'
       const notas = '## Notas\n\n1. Decisões que eu preciso tomar, com opções e recomendação.\n2. Não altere código, apenas analise.\n'
 
-      expect(textoParaExploreDoOpenSpec(analise, tarefa).endsWith(`\n\n${notas}`)).toBe(true)
+      expect(textoParaExploreDoOpenSpec(analise, tarefa).endsWith(`\n\n${locais}\n${notas}`)).toBe(true)
     })
 
     it('omite blocos vazios e projetos em branco', () => {
@@ -120,7 +124,7 @@ describe('funções da análise', () => {
       const texto = textoParaExploreDoOpenSpec(vazia, { ...tarefa, projetos: '' })
 
       expect(texto).not.toMatch(/Checklist|Testes|Dúvidas|Regras|Projetos/)
-      expect(texto).toContain('## Objetivo\n\nAbater o IPI.\n\n## Notas\n')
+      expect(texto).toContain('## Objetivo\n\nAbater o IPI.\n\n## Locais\n')
     })
   })
 

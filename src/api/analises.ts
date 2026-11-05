@@ -109,13 +109,21 @@ export interface TarefaParaOpenSpec {
   empresa: { nome: string }
 }
 
+/** Locais fixos do código do ERP Aureum, logo antes das notas do texto do `/opsx:explore`. */
+const LocaisDoExplore = [
+  '- Front: D:\\Aureum\\erp-frontend\\erp-aureum\\src\\pages\\',
+  '- Back:  Z:\\Aureum\\erp-backend\\Source\\ErpAureum\\ErpAureum\\',
+  '- Varrer os endpoints que alimentam essa lista',
+]
+
 /** Orientações fixas ao fim do texto do `/opsx:explore`. */
 const NotasDoExplore = ['1. Decisões que eu preciso tomar, com opções e recomendação.', '2. Não altere código, apenas analise.']
 
 /**
  * Texto em Markdown pronto para colar no Claude Code: começa com `/opsx:explore <título>` e traz os dados da tarefa,
  * o objetivo, o checklist por área, os testes, as dúvidas e as regras como listas de tarefas (`[x]` nos marcados),
- * com os trechos vagos e a origem das regras, e termina sempre com a seção "Notas" (orientações para a exploração).
+ * com os trechos vagos e a origem das regras, e termina sempre com as seções "Locais" (onde está o código do ERP)
+ * e "Notas" (orientações para a exploração).
  * Blocos vazios são omitidos.
  */
 export function textoParaExploreDoOpenSpec(analise: Analise, tarefa: TarefaParaOpenSpec): string {
@@ -156,6 +164,7 @@ export function textoParaExploreDoOpenSpec(analise: Analise, tarefa: TarefaParaO
     }
   }
 
+  linhas.push('', '## Locais', '', ...LocaisDoExplore)
   linhas.push('', '## Notas', '', ...NotasDoExplore)
 
   return linhas.join('\n') + '\n'

@@ -27,13 +27,13 @@ const analisar = vi.mocked(analisarTarefa)
 const marcar = vi.mocked(marcarItemDaAnalise)
 
 function item(identifier: string, concluido = false): ItemDaAnalise {
-  return { identifier, tipo: 'checklist', ordem: 1, texto: identifier, grupo: 'Front', vago: null, concluido, concluidoEm: null }
+  return { identifier, tipo: 'checklist', ordem: 1, texto: identifier, grupo: 'Front', vago: null, concluido, concluidoEm: null, origem: null }
 }
 
 function analise(versao: number, atual: boolean, itens: ItemDaAnalise[] = [item(`i${versao}`)]): Analise {
   return {
     identifier: `a${versao}`, versao, atual, objetivo: `Objetivo ${versao}`, checklist: [{ nome: 'Front', itens }],
-    testes: [], duvidas: [], modelo: 'claude-opus-5-5', tokensEntrada: 100, tokensSaida: 50, analisadaEm: '2026-11-03T17:44:00',
+    testes: [], duvidas: [], regras: [], modelo: 'claude-opus-5-5', tokensEntrada: 100, tokensSaida: 50, analisadaEm: '2026-11-03T17:44:00',
   }
 }
 

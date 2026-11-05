@@ -8,6 +8,7 @@ import { formatarDataHora } from '@/api/datas'
 import { useNotificarErro } from '@/composables/useNotificarErro'
 import { useAnaliseStore } from '@/stores/analise'
 import { useNovoComentarioStore } from '@/stores/novoComentario'
+import { useTarefaStore } from '@/stores/tarefa'
 
 import ItemDaAnalise from './ItemDaAnalise.vue'
 
@@ -24,6 +25,7 @@ const quasar = useQuasar()
 const notificarErro = useNotificarErro()
 const analise = useAnaliseStore()
 const novoComentario = useNovoComentarioStore()
+const tarefa = useTarefaStore()
 
 watch(() => props.identifier, (novo) => void analise.carregar(novo), { immediate: true })
 
@@ -48,6 +50,8 @@ const versaoSelecionada = computed({
 async function executarAnalise(): Promise<void> {
   if (await analise.analisar()) {
     quasar.notify({ type: 'positive', message: 'Análise concluída.', position: 'top' })
+    // A análise grava os comentários que estavam só no Asana: recarrega o detalhe para exibi-los.
+    void tarefa.recarregar()
   }
 }
 
@@ -180,8 +184,8 @@ function habilitado(item: Item): boolean {
       <!-- Sem análise -->
       <q-card-section v-else-if="!exibida" class="row items-center q-gutter-md">
         <div class="col text-body2 text-grey-8">
-          A IA lê a descrição, os comentários e os retrabalhos da tarefa e organiza a demanda em objetivo, checklist por
-          área, testes e dúvidas para quem pediu.
+          A IA lê a descrição, os comentários (atualizados pelo Asana na hora) e os retrabalhos da tarefa e organiza a
+          demanda em objetivo, checklist por área, testes, dúvidas para quem pediu e regras e observações.
           <div class="text-caption text-grey-7 q-mt-xs">
             Cada análise é uma chamada paga à Claude API e envia o conteúdo da tarefa à Anthropic.
           </div>
@@ -274,6 +278,20 @@ function habilitado(item: Item): boolean {
           <q-list dense>
             <ItemDaAnalise
               v-for="item in exibida.duvidas"
+              :key="item.identifier"
+              :item="item"
+              :habilitado="habilitado(item)"
+              :gravando="analise.marcando.has(item.identifier)"
+              @marcar="marcar"
+            />
+          </q-list>
+        </q-card-section>
+
+        <q-card-section v-if="exibida.regras.length > 0" class="q-pt-none">
+          <div class="text-subtitle2 q-mb-xs"><q-icon name="rule" class="q-mr-xs" />Regras e observações</div>
+          <q-list dense>
+            <ItemDaAnalise
+              v-for="item in exibida.regras"
               :key="item.identifier"
               :item="item"
               :habilitado="habilitado(item)"

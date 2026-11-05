@@ -5,7 +5,7 @@ import type { ItemDaAnalise } from '@/api/analises'
 import { formatarDataHora } from '@/api/datas'
 
 const props = defineProps<{
-  /** Item do checklist, teste ou dúvida */
+  /** Item do checklist, teste, dúvida ou regra */
   item: ItemDaAnalise
   /** Se a caixa pode ser usada (versão atual e item fora de gravação) */
   habilitado: boolean
@@ -25,6 +25,8 @@ const rotuloMarcado = computed(() => {
       return 'Teste realizado'
     case 'duvida':
       return 'Dúvida resolvida'
+    case 'regra':
+      return 'Regra atendida'
     default:
       return 'Feito'
   }
@@ -54,6 +56,10 @@ const rotuloMarcado = computed(() => {
       <q-item-label v-if="item.vago" caption class="text-warning row no-wrap items-start q-mt-xs">
         <q-icon name="warning" size="16px" class="q-mr-xs" />
         <span><span class="text-weight-medium">Vago:</span> {{ item.vago }}</span>
+      </q-item-label>
+      <q-item-label v-if="item.origem" caption class="text-grey-7 row no-wrap items-start q-mt-xs">
+        <q-icon name="chat" size="14px" class="q-mr-xs q-mt-xs" />
+        <span>{{ item.origem }}</span>
       </q-item-label>
     </q-item-section>
   </q-item>

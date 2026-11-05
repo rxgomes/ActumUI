@@ -102,12 +102,12 @@ describe('validarArquivos', () => {
 
 describe('textoDasDuvidasParaEnviar', () => {
   function duvida(texto: string, concluido: boolean): ItemDaAnalise {
-    return { identifier: texto, tipo: 'duvida', ordem: 1, texto, grupo: null, vago: null, concluido, concluidoEm: null }
+    return { identifier: texto, tipo: 'duvida', ordem: 1, texto, grupo: null, vago: null, concluido, concluidoEm: null, origem: null }
   }
 
   function analise(duvidas: ItemDaAnalise[]): Analise {
     return {
-      identifier: 'a1', versao: 1, atual: true, objetivo: 'o', checklist: [], testes: [], duvidas,
+      identifier: 'a1', versao: 1, atual: true, objetivo: 'o', checklist: [], testes: [], duvidas, regras: [],
       modelo: 'claude-opus-5-5', tokensEntrada: 1, tokensSaida: 1, analisadaEm: '2026-11-03T17:44:00',
     }
   }

@@ -9,10 +9,10 @@ type ItemDaApi = components['schemas']['AnaliseItemResponse']
 /** Situação da chave da Claude API na API (a chave nunca é devolvida). */
 export type SituacaoClaude = components['schemas']['ClaudeSituacaoResponse']
 
-/** Tipo do item: ação do checklist, teste ou dúvida para quem pediu. */
+/** Tipo do item: ação do checklist, teste, dúvida para quem pediu ou regra a respeitar. */
 export type TipoItemDaAnalise = components['schemas']['TipoItemAnalise']
 
-/** Item marcável da análise (checklist feito, teste realizado, dúvida resolvida). */
+/** Item marcável da análise (checklist feito, teste realizado, dúvida resolvida, regra atendida). */
 export interface ItemDaAnalise extends Omit<ItemDaApi, 'ordem'> {
   ordem: number
 }
@@ -24,13 +24,15 @@ export interface GrupoDoChecklist {
 }
 
 /** Uma versão da análise da demanda feita pela IA. */
-export interface Analise extends Omit<AnaliseDaApi, 'versao' | 'tokensEntrada' | 'tokensSaida' | 'checklist' | 'testes' | 'duvidas'> {
+export interface Analise extends Omit<AnaliseDaApi, 'versao' | 'tokensEntrada' | 'tokensSaida' | 'checklist' | 'testes' | 'duvidas' | 'regras'> {
   versao: number
   tokensEntrada: number
   tokensSaida: number
   checklist: GrupoDoChecklist[]
   testes: ItemDaAnalise[]
   duvidas: ItemDaAnalise[]
+  /** Regras, restrições e sugestões, cada uma com a origem; vazia em versões anteriores às regras */
+  regras: ItemDaAnalise[]
 }
 
 /** Informa se a chave da Claude API está configurada e o modelo das análises. Não chama a Anthropic. */
@@ -73,6 +75,7 @@ export function paraAnalise(analise: AnaliseDaApi): Analise {
     checklist: analise.checklist.map((grupo) => ({ nome: grupo.nome, itens: grupo.itens.map(paraItem) })),
     testes: analise.testes.map(paraItem),
     duvidas: analise.duvidas.map(paraItem),
+    regras: analise.regras.map(paraItem),
   }
 }
 
@@ -106,5 +109,6 @@ export function comItemAtualizado(analise: Analise, atualizado: ItemDaAnalise): 
     checklist: analise.checklist.map((grupo) => ({ ...grupo, itens: trocar(grupo.itens) })),
     testes: trocar(analise.testes),
     duvidas: trocar(analise.duvidas),
+    regras: trocar(analise.regras),
   }
 }

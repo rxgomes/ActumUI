@@ -24,8 +24,18 @@ function resposta(status: number, corpo: { data?: unknown; error?: unknown }) {
   return { ...corpo, response: new Response(null, { status }) } as never
 }
 
-function itemDaApi(identifier: string, tipo: 'checklist' | 'teste' | 'duvida', ordem: number | string, concluido = false) {
-  return { identifier, tipo, ordem, texto: `texto ${identifier}`, grupo: tipo === 'checklist' ? 'Front' : null, vago: null, concluido, concluidoEm: concluido ? '2026-11-03T17:50:00' : null }
+function itemDaApi(identifier: string, tipo: 'checklist' | 'teste' | 'duvida' | 'regra', ordem: number | string, concluido = false) {
+  return {
+    identifier,
+    tipo,
+    ordem,
+    texto: `texto ${identifier}`,
+    grupo: tipo === 'checklist' ? 'Front' : null,
+    vago: null,
+    concluido,
+    concluidoEm: concluido ? '2026-11-03T17:50:00' : null,
+    origem: tipo === 'regra' ? 'comentário de Maria em 04/11/2026 14:30' : null,
+  }
 }
 
 const analiseDaApi = {
@@ -39,6 +49,7 @@ const analiseDaApi = {
   ],
   testes: [itemDaApi('t1', 'teste', '1')],
   duvidas: [itemDaApi('d1', 'duvida', 1), itemDaApi('d2', 'duvida', 2)],
+  regras: [itemDaApi('r1', 'regra', '1')],
   modelo: 'claude-opus-5-5',
   tokensEntrada: '2373',
   tokensSaida: 1462,
@@ -55,6 +66,7 @@ describe('paraAnalise', () => {
     expect(analise.checklist[1]!.itens.map((item) => item.ordem)).toEqual([2, 3])
     expect(analise.checklist[1]!.itens[1]!.vago).toBe('Não diz quais fluxos.')
     expect(analise.testes[0]!.ordem).toBe(1)
+    expect(analise.regras.map((regra) => [regra.ordem, regra.origem])).toEqual([[1, 'comentário de Maria em 04/11/2026 14:30']])
   })
 })
 
@@ -78,6 +90,15 @@ describe('funções da análise', () => {
     expect(progressoDoChecklist(atualizada)).toEqual({ feitos: 2, total: 3 })
     expect(atualizada.testes[0]!.concluido).toBe(true)
     expect(analise.testes[0]!.concluido).toBe(false)
+  })
+
+  it('substitui a regra atualizada sem perder a origem', () => {
+    const regra: ItemDaAnalise = { ...analise.regras[0]!, concluido: true, concluidoEm: '2026-11-03T18:00:00' }
+
+    const atualizada = comItemAtualizado(analise, regra)
+
+    expect([atualizada.regras[0]!.concluido, atualizada.regras[0]!.origem]).toEqual([true, 'comentário de Maria em 04/11/2026 14:30'])
+    expect(analise.regras[0]!.concluido).toBe(false)
   })
 })
 

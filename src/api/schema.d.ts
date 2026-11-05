@@ -587,14 +587,14 @@ export interface components {
              */
             prioridade: null | number | string;
         };
-        /** @description Checklist item, test or question of an analysis */
+        /** @description Checklist item, test, question or rule of an analysis */
         AnaliseItemResponse: {
             /**
              * Format: uuid
              * @description Item identifier
              */
             identifier: string;
-            /** @description `checklist`, `teste` or `duvida` */
+            /** @description `checklist`, `teste`, `duvida` or `regra` */
             tipo: components["schemas"]["TipoItemAnalise"];
             /**
              * Format: int16
@@ -603,17 +603,22 @@ export interface components {
             ordem: number | string;
             /** @description Item text */
             texto: string;
-            /** @description Area of a checklist item; `null` for tests and questions */
+            /** @description Area of a checklist item; `null` for the other types */
             grupo: null | string;
             /** @description Why a checklist item is vague in the demand; `null` when it is clear */
             vago: null | string;
-            /** @description Done (checklist), tested (test) or resolved (question) */
+            /** @description Done (checklist), tested (test), resolved (question) or respected (rule) */
             concluido: boolean;
             /**
              * Format: date-time
              * @description Local date and time of the marking; `null` when not marked
              */
             concluidoEm: null | string;
+            /**
+             * @description Where a rule came from (`descrição` or `comentário de Maria em 04/11/2026 14:30`);
+             *     `null` for the other types
+             */
+            origem: null | string;
         };
         /** @description One version of the AI analysis of a task */
         AnaliseResponse: {
@@ -637,6 +642,11 @@ export interface components {
             testes: components["schemas"]["AnaliseItemResponse"][];
             /** @description Questions to the requester, in order */
             duvidas: components["schemas"]["AnaliseItemResponse"][];
+            /**
+             * @description Rules, constraints and suggestions to respect, in order, each with its origin; empty for versions analyzed before
+             *     the rules existed
+             */
+            regras: components["schemas"]["AnaliseItemResponse"][];
             /** @description Model that answered */
             modelo: string;
             /**
@@ -1280,10 +1290,10 @@ export interface components {
          */
         TipoBranch: "base" | "implementacao";
         /**
-         * @description Kind of an analysis item (stored as snake_case text: `checklist`, `teste` or `duvida`)
+         * @description Kind of an analysis item (stored as snake_case text: `checklist`, `teste`, `duvida` or `regra`)
          * @enum {unknown}
          */
-        TipoItemAnalise: "checklist" | "teste" | "duvida";
+        TipoItemAnalise: "checklist" | "teste" | "duvida" | "regra";
     };
     responses: never;
     parameters: never;

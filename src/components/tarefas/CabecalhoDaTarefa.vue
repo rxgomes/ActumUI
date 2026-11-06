@@ -52,6 +52,10 @@ const botoesVisiveis = computed(() => botoes.filter((botao) => visivel(botao.aca
       <div class="col-12 col-md">
         <div class="row items-center q-gutter-sm q-mb-xs">
           <q-chip dense square text-color="white" class="q-ml-none" :style="{ backgroundColor: detalhe.empresa.cor }" :label="detalhe.empresa.nome" />
+          <span v-if="detalhe.projetos" class="text-body2 text-grey-8 row items-center no-wrap">
+            <q-icon name="folder" size="16px" class="q-mr-xs" />{{ detalhe.projetos }}
+            <q-tooltip>Projetos no Asana</q-tooltip>
+          </span>
           <!-- "Iniciada" é redundante ao lado de Em andamento/Pausada; os demais status continuam visíveis. -->
           <q-badge
             v-if="detalhe.status !== 'em_andamento'"

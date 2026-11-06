@@ -76,8 +76,8 @@ async function executarDireto(acao: keyof typeof AcoesDiretas): Promise<void> {
 function aoEscolherAcao(acao: AcaoDaTarefa): void {
   switch (acao) {
     case 'iniciar':
-      // Da entrada, pede as branches e o prazo; pausada, retoma direto.
-      if (tarefa.detalhe?.status === 'entrada') {
+      // Da entrada, pede as branches e o prazo; reaberta sem branch nova, oferece criá-la; pausada, retoma direto.
+      if (tarefa.detalhe?.status === 'entrada' || tarefa.detalhe?.novaBranchSugerida) {
         iniciarAberto.value = true
       } else {
         void executarDireto('iniciar')
@@ -183,7 +183,7 @@ function excluirBranch(branch: Branch): void {
         </div>
       </div>
 
-      <IniciarTarefaDialog v-model:aberto="iniciarAberto" :detalhe="tarefa.detalhe" @concluido="aposAcao('Tarefa iniciada.')" />
+      <IniciarTarefaDialog v-model:aberto="iniciarAberto" :detalhe="tarefa.detalhe" @concluido="aposAcao(tarefa.detalhe.status === 'entrada' ? 'Tarefa iniciada.' : 'Tarefa em andamento.')" />
       <NovoPrazoDialog v-model:aberto="novoPrazoAberto" :detalhe="tarefa.detalhe" @concluido="aposAcao('Prazo e prioridade atualizados.')" />
       <NovaBranchDialog v-model:aberto="novaBranchAberto" :detalhe="tarefa.detalhe" @concluido="aposAcao('Branch registrada.')" />
       <ConcluirTarefaDialog v-model:aberto="concluirAberto" :detalhe="tarefa.detalhe" @concluido="aposAcao('Tarefa concluída no Asana.')" />

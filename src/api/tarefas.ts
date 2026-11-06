@@ -129,6 +129,16 @@ export interface DadosParaIniciar {
   partes: ParteBranch[]
 }
 
+/**
+ * Nova branch criada ao retomar uma tarefa reaberta. A API cria a implementação no GitHub, a partir da base, nos
+ * repositórios das `partes`, e a vincula ao retrabalho aberto; uma base que a tarefa já tem é reaproveitada.
+ */
+export interface DadosParaRetomar {
+  branchBase: string
+  branchImplementacao: string
+  partes: ParteBranch[]
+}
+
 /** Alteração de prazo interno (`yyyy-MM-dd`) e/ou prioridade; o que não for informado é mantido. */
 export interface DadosParaAlterar {
   prazoInterno?: string
@@ -183,9 +193,21 @@ export function listarBasesRecentes(identifier: string): Promise<string[]> {
   return executar(() => cliente.GET('/tarefas/{identifier}/branches-base-recentes', { params: { path: { identifier } } }))
 }
 
-/** Põe em andamento uma tarefa pausada (já iniciada ou em retrabalho). */
-export async function retomarTarefa(identifier: string): Promise<void> {
-  await executar(() => cliente.POST('/tarefas/{identifier}/retomar', { params: { path: { identifier } } }))
+/**
+ * Põe em andamento uma tarefa pausada (já iniciada ou em retrabalho). Com `dados`, cria antes a nova branch de
+ * implementação no GitHub; em falha lança `ErroDaApi` (`400` regra ou base inexistente, `409` nome já registrado na
+ * tarefa, `502` GitHub indisponível) e a tarefa continua pausada.
+ */
+export async function retomarTarefa(identifier: string, dados?: DadosParaRetomar): Promise<void> {
+  if (dados === undefined) {
+    await executar(() => cliente.POST('/tarefas/{identifier}/retomar', { params: { path: { identifier } } }))
+    return
+  }
+
+  await executar(() => cliente.POST('/tarefas/{identifier}/retomar', {
+    params: { path: { identifier } },
+    body: { branchBase: dados.branchBase, branchImplementacao: dados.branchImplementacao, partes: dados.partes },
+  }))
 }
 
 /** Pausa uma tarefa em andamento. */

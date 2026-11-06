@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { cliente } from './cliente'
 import { ErroDaApi } from './erros'
-import { adicionarBranch, alterarTarefa, concluirTarefa, iniciarTarefa, listarBasesRecentes, obterTarefa } from './tarefas'
+import { adicionarBranch, alterarTarefa, concluirTarefa, iniciarTarefa, listarBasesRecentes, obterTarefa, retomarTarefa } from './tarefas'
 
 vi.mock('./cliente', () => ({ cliente: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn(), DELETE: vi.fn() } }))
 
@@ -45,6 +45,7 @@ const detalheDaApi = {
       prazoInternoAnterior: '2026-10-20', prazoInternoNovo: null, resolvidoEm: null, comentarios: [],
     },
   ],
+  novaBranchSugerida: true,
   comentarios: [],
 }
 
@@ -87,6 +88,31 @@ describe('detalhe e ações da tarefa', () => {
       params: { path: { identifier: 't1' } },
       body: { branchBase: 'main', branchImplementacao: '261105-consumidor-final-nf', prazoInterno: '2026-11-10', partes: ['front', 'back'] },
     })
+  })
+
+  it('retoma sem corpo quando não há nova branch', async () => {
+    post.mockResolvedValue(resposta(200, { data: {} }))
+
+    await retomarTarefa('t1')
+
+    expect(post).toHaveBeenCalledWith('/tarefas/{identifier}/retomar', { params: { path: { identifier: 't1' } } })
+  })
+
+  it('retoma enviando a nova branch e as partes', async () => {
+    post.mockResolvedValue(resposta(200, { data: {} }))
+
+    await retomarTarefa('t1', { branchBase: 'main', branchImplementacao: '261106-ajuste-ipi', partes: ['back'] })
+
+    expect(post).toHaveBeenCalledWith('/tarefas/{identifier}/retomar', {
+      params: { path: { identifier: 't1' } },
+      body: { branchBase: 'main', branchImplementacao: '261106-ajuste-ipi', partes: ['back'] },
+    })
+  })
+
+  it('mantém a indicação de nova branch sugerida do detalhe', async () => {
+    get.mockResolvedValue(resposta(200, { data: detalheDaApi }))
+
+    expect((await obterTarefa('t1'))?.novaBranchSugerida).toBe(true)
   })
 
   it('lista as bases recentes da empresa da tarefa', async () => {

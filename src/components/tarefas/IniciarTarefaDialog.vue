@@ -1,25 +1,37 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
-import { iniciarTarefa, listarBasesRecentes, type ParteBranch, type TarefaDetalhe } from '@/api/tarefas'
+import { iniciarTarefa, listarBasesRecentes, type ParteBranch, retomarTarefa, type TarefaDetalhe } from '@/api/tarefas'
 
 import { sugerirBranchDeImplementacao } from './branches'
 import CampoDeData from './CampoDeData.vue'
 import { errosDoDialogo } from './errosDoDialogo'
 
 const props = defineProps<{
-  /** Tarefa a iniciar (status entrada) */
+  /** Tarefa a iniciar: na entrada pede as branches e o prazo; reaberta, oferece criar uma nova branch ou continuar */
   detalhe: TarefaDetalhe
 }>()
 
 const emit = defineEmits<{
-  /** A tarefa foi iniciada */
+  /** A tarefa foi iniciada ou retomada */
   concluido: []
 }>()
 
 const aberto = defineModel<boolean>('aberto', { required: true })
 
 const Campos = ['branchBase', 'branchImplementacao', 'prazoInterno', 'partes'] as const
+
+type Escolha = 'novaBranch' | 'continuar'
+
+const OpcoesDoRetrabalho: { label: string; value: Escolha }[] = [
+  { label: 'Criar nova branch', value: 'novaBranch' },
+  { label: 'Continuar na branch atual', value: 'continuar' },
+]
+
+/** Fora da entrada, a tarefa foi reaberta: o diálogo retoma, com ou sem nova branch. */
+const retrabalho = computed(() => props.detalhe.status !== 'entrada')
+const escolha = ref<Escolha>('novaBranch')
+const criandoBranch = computed(() => !retrabalho.value || escolha.value === 'novaBranch')
 
 const branchBase = ref('')
 const branchImplementacao = ref('')
@@ -72,6 +84,7 @@ function aoAbrir(): void {
   prazoInterno.value = props.detalhe.prazoAsana
   front.value = false
   back.value = false
+  escolha.value = 'novaBranch'
   errosPorCampo.value = {}
   erroGeral.value = null
   void carregarBases()
@@ -110,22 +123,39 @@ function aoDigitarBase(valor: string): void {
   branchBase.value = valor
 }
 
+function enviar(): Promise<void> {
+  const identifier = props.detalhe.identifier
+  if (!retrabalho.value) {
+    return iniciarTarefa(identifier, {
+      branchBase: branchBase.value.trim(),
+      branchImplementacao: branchImplementacao.value,
+      prazoInterno: prazoInterno.value ?? '',
+      partes: partes.value,
+    })
+  }
+
+  if (escolha.value === 'continuar') {
+    return retomarTarefa(identifier)
+  }
+
+  return retomarTarefa(identifier, {
+    branchBase: branchBase.value.trim(),
+    branchImplementacao: branchImplementacao.value,
+    partes: partes.value,
+  })
+}
+
 async function confirmar(): Promise<void> {
   salvando.value = true
   errosPorCampo.value = {}
   erroGeral.value = null
 
   try {
-    await iniciarTarefa(props.detalhe.identifier, {
-      branchBase: branchBase.value.trim(),
-      branchImplementacao: branchImplementacao.value,
-      prazoInterno: prazoInterno.value ?? '',
-      partes: partes.value,
-    })
+    await enviar()
     aberto.value = false
     emit('concluido')
   } catch (erro) {
-    const erros = errosDoDialogo(erro, Campos)
+    const erros = errosDoDialogo(erro, Campos, 'branchImplementacao')
     errosPorCampo.value = erros.porCampo
     erroGeral.value = erros.geral
   } finally {
@@ -137,55 +167,64 @@ async function confirmar(): Promise<void> {
 <template>
   <q-dialog v-model="aberto" persistent @before-show="aoAbrir">
     <q-card style="width: 520px; max-width: 95vw">
-      <q-card-section class="text-h6">Iniciar tarefa</q-card-section>
+      <q-card-section class="text-h6">{{ retrabalho ? 'Iniciar retrabalho' : 'Iniciar tarefa' }}</q-card-section>
 
       <q-card-section class="q-pt-none column q-gutter-md">
-        <div class="text-body2 text-grey-8">
+        <div v-if="retrabalho" class="text-body2 text-grey-8">
+          A tarefa foi reaberta. Crie uma nova branch de implementação no GitHub a partir da base, nos repositórios das
+          partes marcadas, ou continue na branch atual. A nova branch fica vinculada ao retrabalho e é enviada ao Asana
+          como tag na conclusão.
+        </div>
+        <div v-else class="text-body2 text-grey-8">
           A branch de implementação será criada no GitHub a partir da base, nos repositórios das partes marcadas. As
           branches são enviadas ao Asana como tags na conclusão.
         </div>
 
         <q-banner v-if="erroGeral" dense rounded class="bg-red-1 text-negative">{{ erroGeral }}</q-banner>
 
-        <q-select
-          :model-value="branchBase"
-          outlined
-          autofocus
-          use-input
-          hide-selected
-          fill-input
-          input-debounce="0"
-          new-value-mode="add-unique"
-          label="Branch base"
-          :options="basesRecentes"
-          :loading="carregandoBases"
-          :hint="dicaDaBase"
-          :error="Boolean(errosPorCampo.branchBase)"
-          :error-message="errosPorCampo.branchBase"
-          :disable="salvando"
-          @update:model-value="(valor: string | null) => (branchBase = valor ?? '')"
-          @input-value="aoDigitarBase"
-        />
-        <q-input
-          v-model="branchImplementacao"
-          outlined
-          label="Branch de implementação"
-          hint="Sugestão: data de hoje e título da tarefa. Pode alterar."
-          :error="Boolean(errosPorCampo.branchImplementacao)"
-          :error-message="errosPorCampo.branchImplementacao"
-          :disable="salvando"
-        />
-        <CampoDeData v-model="prazoInterno" label="Prazo interno" :erro="errosPorCampo.prazoInterno" />
+        <q-option-group v-if="retrabalho" v-model="escolha" :options="OpcoesDoRetrabalho" :disable="salvando" />
 
-        <div>
-          <div class="text-body2 text-grey-8">Partes</div>
-          <div class="row q-gutter-md">
-            <q-checkbox v-model="front" label="Front" :disable="salvando" />
-            <q-checkbox v-model="back" label="Back" :disable="salvando" />
+        <template v-if="criandoBranch">
+          <q-select
+            :model-value="branchBase"
+            outlined
+            autofocus
+            use-input
+            hide-selected
+            fill-input
+            input-debounce="0"
+            new-value-mode="add-unique"
+            label="Branch base"
+            :options="basesRecentes"
+            :loading="carregandoBases"
+            :hint="dicaDaBase"
+            :error="Boolean(errosPorCampo.branchBase)"
+            :error-message="errosPorCampo.branchBase"
+            :disable="salvando"
+            @update:model-value="(valor: string | null) => (branchBase = valor ?? '')"
+            @input-value="aoDigitarBase"
+          />
+          <q-input
+            v-model="branchImplementacao"
+            outlined
+            label="Branch de implementação"
+            hint="Sugestão: data de hoje e título da tarefa. Pode alterar."
+            :error="Boolean(errosPorCampo.branchImplementacao)"
+            :error-message="errosPorCampo.branchImplementacao"
+            :disable="salvando"
+          />
+          <CampoDeData v-if="!retrabalho" v-model="prazoInterno" label="Prazo interno" :erro="errosPorCampo.prazoInterno" />
+
+          <div>
+            <div class="text-body2 text-grey-8">Partes</div>
+            <div class="row q-gutter-md">
+              <q-checkbox v-model="front" label="Front" :disable="salvando" />
+              <q-checkbox v-model="back" label="Back" :disable="salvando" />
+            </div>
+            <div v-if="errosPorCampo.partes" class="text-negative text-caption">{{ errosPorCampo.partes }}</div>
+            <div v-else-if="partes.length === 0" class="text-grey-7 text-caption">Marque ao menos uma parte.</div>
           </div>
-          <div v-if="errosPorCampo.partes" class="text-negative text-caption">{{ errosPorCampo.partes }}</div>
-          <div v-else-if="partes.length === 0" class="text-grey-7 text-caption">Marque ao menos uma parte.</div>
-        </div>
+        </template>
       </q-card-section>
 
       <q-card-actions align="right">
@@ -197,7 +236,7 @@ async function confirmar(): Promise<void> {
           icon="play_arrow"
           label="Iniciar"
           :loading="salvando"
-          :disable="partes.length === 0"
+          :disable="criandoBranch && partes.length === 0"
           @click="confirmar"
         />
       </q-card-actions>

@@ -219,7 +219,7 @@ export interface paths {
         put?: never;
         /**
          * Iniciar tarefa
-         * @description Inicia uma tarefa da entrada com a branch base, a branch de implementação (diferentes), o prazo interno e as partes (front e/ou back). Antes de gravar, a branch de implementação é criada no repositório do GitHub de cada parte, a partir do último commit da base (uma branch que já existe é aceita); se o GitHub recusar ou falhar, a tarefa não é iniciada. As branches só são enviadas ao Asana na conclusão.
+         * @description Inicia uma tarefa da entrada com a branch base, a branch de implementação (diferentes), o prazo interno e as partes (front e/ou back). Antes de gravar, a branch de implementação é criada no repositório do GitHub de cada parte, a partir do último commit da base (uma branch que já existe é aceita); se o GitHub recusar ou falhar, a tarefa não é iniciada. Uma base que a tarefa já tem (tarefa desarquivada) é só conferida, sem ser registrada de novo; uma implementação com nome já registrado na tarefa é recusada com 409. As branches só são enviadas ao Asana na conclusão.
          */
         post: operations["IniciarTarefa"];
         delete?: never;
@@ -259,7 +259,7 @@ export interface paths {
         put?: never;
         /**
          * Retomar tarefa (Em andamento)
-         * @description Põe em andamento uma tarefa pausada, já iniciada ou em retrabalho. Tarefas bloqueadas precisam ser desbloqueadas antes. Nada é enviado ao Asana.
+         * @description Põe em andamento uma tarefa pausada, já iniciada ou em retrabalho. Tarefas bloqueadas precisam ser desbloqueadas antes. O corpo é opcional: com branchBase, branchImplementacao e partes, a branch de implementação é criada no repositório do GitHub de cada parte a partir do último commit da base e registrada vinculada ao retrabalho aberto (uma base que a tarefa já tem é só conferida); se o GitHub recusar ou falhar, nada é gravado e a tarefa continua pausada. Uma implementação com nome já registrado na tarefa é recusada com 409. Nada é enviado ao Asana.
          */
         post: operations["RetomarTarefa"];
         delete?: never;
@@ -1096,6 +1096,15 @@ export interface components {
             /** @description Tasks whose history could not be read (they keep their reworks) */
             falhas: components["schemas"]["FalhaDoReprocessamentoResponse"][];
         };
+        /** @description New branch created when resuming a paused task, usually after a reopening (rework) */
+        RetomarTarefaRequest: {
+            /** @description Base branch name (e.g. `main`); when the task already has it as a base branch, it is only checked in the GitHub */
+            branchBase: null | string;
+            /** @description New implementation branch name, not yet registered in the task */
+            branchImplementacao: null | string;
+            /** @description Parts the new branches belong to (`front` and/or `back`): the implementation branch is created in the GitHub repository of each part, from the last commit of the base branch */
+            partes: null | components["schemas"]["ParteBranch"][];
+        };
         /** @description Rework (reopening) of a task */
         RetrabalhoResponse: {
             /**
@@ -1301,6 +1310,8 @@ export interface components {
             retrabalhos: components["schemas"]["RetrabalhoResponse"][];
             /** @description Every comment, oldest first */
             comentarios: components["schemas"]["ComentarioResponse"][];
+            /** @description Whether a new implementation branch is suggested when resuming: the task is in rework and the open rework has no implementation branch yet (`POST /tarefas/{identifier}/retomar` with a body) */
+            novaBranchSugerida: boolean;
         };
         /** @description Task in the ranking of reworks of the period */
         TarefaDoRankingResponse: {
@@ -1748,6 +1759,15 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
             /** @description Bad Gateway */
             502: {
                 headers: {
@@ -1799,7 +1819,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": null | components["schemas"]["RetomarTarefaRequest"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {
@@ -1821,6 +1845,24 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
                 headers: {
                     [name: string]: unknown;
                 };

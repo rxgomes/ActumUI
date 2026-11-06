@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
-import { adicionarBranch, type TarefaDetalhe, type TipoBranch } from '@/api/tarefas'
+import { adicionarBranch, type ParteBranch, type TarefaDetalhe, type TipoBranch } from '@/api/tarefas'
 
 import { errosDoDialogo } from './errosDoDialogo'
 
@@ -17,28 +17,55 @@ const emit = defineEmits<{
 
 const aberto = defineModel<boolean>('aberto', { required: true })
 
-const Campos = ['tipo', 'nome'] as const
+const Campos = ['tipo', 'nome', 'partes'] as const
 
 const tipo = ref<TipoBranch>('implementacao')
 const nome = ref('')
+const front = ref(false)
+const back = ref(false)
 const salvando = ref(false)
 const errosPorCampo = ref<Record<string, string>>({})
 const erroGeral = ref<string | null>(null)
 
+const partes = computed<ParteBranch[]>(() => {
+  const selecionadas: ParteBranch[] = []
+  if (front.value) {
+    selecionadas.push('front')
+  }
+
+  if (back.value) {
+    selecionadas.push('back')
+  }
+
+  return selecionadas
+})
+
+const explicacaoDoTipo = computed(() =>
+  tipo.value === 'implementacao'
+    ? 'A branch será criada no GitHub a partir da base da tarefa, nos repositórios das partes marcadas.'
+    : 'A branch base precisa já existir no GitHub, nos repositórios das partes marcadas.',
+)
+
 function aoAbrir(): void {
   tipo.value = 'implementacao'
   nome.value = ''
+  front.value = false
+  back.value = false
   errosPorCampo.value = {}
   erroGeral.value = null
 }
 
 async function confirmar(): Promise<void> {
+  if (partes.value.length === 0 || salvando.value) {
+    return
+  }
+
   salvando.value = true
   errosPorCampo.value = {}
   erroGeral.value = null
 
   try {
-    await adicionarBranch(props.detalhe.identifier, tipo.value, nome.value)
+    await adicionarBranch(props.detalhe.identifier, tipo.value, nome.value, partes.value)
     aberto.value = false
     emit('concluido')
   } catch (erro) {
@@ -66,12 +93,14 @@ async function confirmar(): Promise<void> {
           <q-option-group
             v-model="tipo"
             inline
+            :disable="salvando"
             :options="[
               { label: 'Implementação', value: 'implementacao' },
               { label: 'Base', value: 'base' },
             ]"
           />
           <div v-if="errosPorCampo.tipo" class="text-negative text-caption">{{ errosPorCampo.tipo }}</div>
+          <div class="text-grey-7 text-caption">{{ explicacaoDoTipo }}</div>
         </div>
 
         <q-input
@@ -79,16 +108,36 @@ async function confirmar(): Promise<void> {
           outlined
           autofocus
           label="Nome da branch"
-          hint="Vira a tag no Asana, com o mesmo nome"
+          hint="Vira a tag no Asana, junto com as partes"
           :error="Boolean(errosPorCampo.nome)"
           :error-message="errosPorCampo.nome"
+          :disable="salvando"
           @keyup.enter="confirmar"
         />
+
+        <div>
+          <div class="text-body2 text-grey-8">Partes</div>
+          <div class="row q-gutter-md">
+            <q-checkbox v-model="front" label="Front" :disable="salvando" />
+            <q-checkbox v-model="back" label="Back" :disable="salvando" />
+          </div>
+          <div v-if="errosPorCampo.partes" class="text-negative text-caption">{{ errosPorCampo.partes }}</div>
+          <div v-else-if="partes.length === 0" class="text-grey-7 text-caption">Marque ao menos uma parte.</div>
+        </div>
       </q-card-section>
 
       <q-card-actions align="right">
         <q-btn v-close-popup flat no-caps label="Cancelar" :disable="salvando" />
-        <q-btn unelevated no-caps color="primary" icon="add" label="Registrar" :loading="salvando" @click="confirmar" />
+        <q-btn
+          unelevated
+          no-caps
+          color="primary"
+          icon="add"
+          label="Registrar"
+          :loading="salvando"
+          :disable="partes.length === 0"
+          @click="confirmar"
+        />
       </q-card-actions>
     </q-card>
   </q-dialog>

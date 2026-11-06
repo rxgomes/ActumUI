@@ -104,7 +104,7 @@ function excluirBranch(branch: Branch): void {
   quasar
     .dialog({
       title: 'Excluir branch',
-      message: `Excluir a branch "${branch.nome}"? Ela ainda não foi enviada ao Asana.`,
+      message: `Excluir a branch "${branch.nome}"? Ela ainda não foi enviada ao Asana. A branch não é excluída no GitHub.`,
       cancel: { label: 'Cancelar', flat: true, noCaps: true },
       ok: { label: 'Excluir', color: 'negative', unelevated: true, noCaps: true },
       persistent: true,

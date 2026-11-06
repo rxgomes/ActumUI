@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { cliente } from './cliente'
 import { ErroDaApi } from './erros'
-import { adicionarBranch, alterarTarefa, concluirTarefa, iniciarTarefa, obterTarefa } from './tarefas'
+import { adicionarBranch, alterarTarefa, concluirTarefa, iniciarTarefa, listarBasesRecentes, obterTarefa } from './tarefas'
 
 vi.mock('./cliente', () => ({ cliente: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn(), DELETE: vi.fn() } }))
 
@@ -33,8 +33,11 @@ const detalheDaApi = {
   motivoArquivamento: null,
   sincronizadaEm: '2026-11-03T15:32:00',
   branches: [
-    { identifier: 'b1', tipo: 'base', nome: 'main', enviada: true, enviadaAsanaEm: '2026-10-31T17:00:00', retrabalhoNumero: null },
-    { identifier: 'b2', tipo: 'implementacao', nome: 'fix/x', enviada: false, enviadaAsanaEm: null, retrabalhoNumero: '1' },
+    { identifier: 'b1', tipo: 'base', nome: 'main', enviada: true, enviadaAsanaEm: '2026-10-31T17:00:00', retrabalhoNumero: null, partes: [], tag: 'main' },
+    {
+      identifier: 'b2', tipo: 'implementacao', nome: 'fix/x', enviada: false, enviadaAsanaEm: null, retrabalhoNumero: '1',
+      partes: ['front'], tag: '(Front) => fix/x',
+    },
   ],
   retrabalhos: [
     {
@@ -61,6 +64,7 @@ describe('detalhe e ações da tarefa', () => {
     expect(detalhe?.prioridade).toBe(2)
     expect(detalhe?.branches.map((branch) => branch.retrabalhoNumero)).toEqual([null, 1])
     expect(detalhe?.retrabalhos[0].numero).toBe(1)
+    expect(detalhe?.branches.map((branch) => [branch.partes, branch.tag])).toEqual([[[], 'main'], [['front'], '(Front) => fix/x']])
   })
 
   it('devolve null quando a tarefa não existe (404)', async () => {
@@ -69,14 +73,39 @@ describe('detalhe e ações da tarefa', () => {
     expect(await obterTarefa('inexistente')).toBeNull()
   })
 
-  it('inicia enviando as branches e o prazo no formato da API', async () => {
+  it('inicia enviando as branches, as partes e o prazo no formato da API', async () => {
     post.mockResolvedValue(resposta(200, { data: {} }))
 
-    await iniciarTarefa('t1', { branchBase: 'main', branchImplementacao: 'feature/ipi-devolvido', prazoInterno: '2026-11-10' })
+    await iniciarTarefa('t1', {
+      branchBase: 'main',
+      branchImplementacao: '261105-consumidor-final-nf',
+      prazoInterno: '2026-11-10',
+      partes: ['front', 'back'],
+    })
 
     expect(post).toHaveBeenCalledWith('/tarefas/{identifier}/iniciar', {
       params: { path: { identifier: 't1' } },
-      body: { branchBase: 'main', branchImplementacao: 'feature/ipi-devolvido', prazoInterno: '2026-11-10' },
+      body: { branchBase: 'main', branchImplementacao: '261105-consumidor-final-nf', prazoInterno: '2026-11-10', partes: ['front', 'back'] },
+    })
+  })
+
+  it('lista as bases recentes da empresa da tarefa', async () => {
+    get.mockResolvedValue(resposta(200, { data: ['hotfix', 'develop', 'main'] }))
+
+    const bases = await listarBasesRecentes('t1')
+
+    expect(get).toHaveBeenCalledWith('/tarefas/{identifier}/branches-base-recentes', { params: { path: { identifier: 't1' } } })
+    expect(bases).toEqual(['hotfix', 'develop', 'main'])
+  })
+
+  it('registra a branch com as partes', async () => {
+    post.mockResolvedValue(resposta(201, { data: {} }))
+
+    await adicionarBranch('t1', 'implementacao', 'fix/ipi-devolvido-pagamento', ['front'])
+
+    expect(post).toHaveBeenCalledWith('/tarefas/{identifier}/branches', {
+      params: { path: { identifier: 't1' } },
+      body: { tipo: 'implementacao', nome: 'fix/ipi-devolvido-pagamento', partes: ['front'] },
     })
   })
 
@@ -94,7 +123,7 @@ describe('detalhe e ações da tarefa', () => {
   it('lança 409 quando a branch já existe na tarefa', async () => {
     post.mockResolvedValue(resposta(409, { error: { title: 'Conflito.', status: 409, detail: 'A tarefa já tem uma branch com esse nome.' } }))
 
-    const erro = await adicionarBranch('t1', 'implementacao', 'fix/x').catch((falha: unknown) => falha)
+    const erro = await adicionarBranch('t1', 'implementacao', 'fix/x', ['back']).catch((falha: unknown) => falha)
 
     expect(erro).toBeInstanceOf(ErroDaApi)
     expect(erro).toMatchObject({ status: 409, message: 'A tarefa já tem uma branch com esse nome.' })

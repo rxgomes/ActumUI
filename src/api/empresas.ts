@@ -16,15 +16,25 @@ export interface DadosDaEmpresa {
   cor?: string
   /** Se a empresa entra na sincronização */
   sincronizar?: boolean
+  /** Repositório do front no GitHub (`dono/repo`); texto vazio remove */
+  repositorioFront?: string
+  /** Repositório do back no GitHub (`dono/repo`); texto vazio remove */
+  repositorioBack?: string
 }
 
 /**
- * Altera a cor e/ou a participação da empresa na sincronização e devolve a empresa atualizada. Lança `ErroDaApi`
- * em falha (`400` com `errosPorCampo.cor` para cor inválida, `404` para empresa inexistente).
+ * Altera a cor, a participação na sincronização e/ou os repositórios da empresa e devolve a empresa atualizada.
+ * Lança `ErroDaApi` em falha (`400` com `errosPorCampo.cor`, `repositorioFront` ou `repositorioBack` para valor
+ * inválido, `404` para empresa inexistente).
  */
 export function alterarEmpresa(identifier: string, dados: DadosDaEmpresa): Promise<Empresa> {
   return executar(() => cliente.PATCH('/empresas/{identifier}', {
     params: { path: { identifier } },
-    body: { cor: dados.cor ?? null, sincronizar: dados.sincronizar ?? null },
+    body: {
+      cor: dados.cor ?? null,
+      sincronizar: dados.sincronizar ?? null,
+      repositorioFront: dados.repositorioFront ?? null,
+      repositorioBack: dados.repositorioBack ?? null,
+    },
   }))
 }

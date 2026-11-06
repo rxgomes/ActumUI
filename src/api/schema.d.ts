@@ -219,9 +219,29 @@ export interface paths {
         put?: never;
         /**
          * Iniciar tarefa
-         * @description Inicia uma tarefa da entrada com a branch base, a branch de implementação (diferentes) e o prazo interno. As branches só são enviadas ao Asana na conclusão.
+         * @description Inicia uma tarefa da entrada com a branch base, a branch de implementação (diferentes), o prazo interno e as partes (front e/ou back). Antes de gravar, a branch de implementação é criada no repositório do GitHub de cada parte, a partir do último commit da base (uma branch que já existe é aceita); se o GitHub recusar ou falhar, a tarefa não é iniciada. As branches só são enviadas ao Asana na conclusão.
          */
         post: operations["IniciarTarefa"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tarefas/{identifier}/branches-base-recentes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Bases recentes da empresa
+         * @description Devolve até 3 nomes distintos de branches base registradas nas tarefas da mesma empresa da tarefa informada, da mais recente para a mais antiga.
+         */
+        get: operations["ListarBasesRecentes"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -319,7 +339,7 @@ export interface paths {
         put?: never;
         /**
          * Registrar branch
-         * @description Registra uma branch (base ou implementacao) em tarefa em andamento, bloqueada ou em retrabalho. Em retrabalho, a branch fica vinculada ao retrabalho aberto. Nomes não se repetem na tarefa.
+         * @description Registra uma branch (base ou implementacao), com as partes (front e/ou back), em tarefa em andamento, bloqueada ou em retrabalho. Uma base precisa existir no repositório do GitHub de cada parte; uma implementação é criada em cada um deles a partir da base mais recente da tarefa (uma branch que já existe é aceita). Em retrabalho, a branch fica vinculada ao retrabalho aberto. Nomes não se repetem na tarefa.
          */
         post: operations["AdicionarBranch"];
         delete?: never;
@@ -340,7 +360,7 @@ export interface paths {
         post?: never;
         /**
          * Excluir branch
-         * @description Exclui uma branch ainda não enviada ao Asana (para corrigir erro de digitação). Branches enviadas não podem ser excluídas.
+         * @description Exclui uma branch ainda não enviada ao Asana (para corrigir erro de digitação). Branches enviadas não podem ser excluídas. A branch não é excluída no GitHub.
          */
         delete: operations["RemoverBranch"];
         options?: never;
@@ -357,7 +377,7 @@ export interface paths {
         };
         /**
          * Prévia da conclusão
-         * @description Informa as tags que serão adicionadas no Asana (branches ainda não enviadas) e se a conclusão é permitida, com o motivo quando não for. Não consulta o Asana.
+         * @description Informa as tags que serão adicionadas no Asana (branches ainda não enviadas, no formato "(Front, Back) => nome", ou só o nome em branches sem partes) e se a conclusão é permitida, com o motivo quando não for. Não consulta o Asana.
          */
         get: operations["ObterPreviaDaConclusao"];
         put?: never;
@@ -379,7 +399,7 @@ export interface paths {
         put?: never;
         /**
          * Concluir tarefa
-         * @description Adiciona no Asana, como tags com o nome exato, só as branches ainda não enviadas, conclui a tarefa no Asana e no Actum e resolve o retrabalho aberto. Se o Asana falhar no meio, uma nova tentativa continua de onde parou.
+         * @description Adiciona no Asana, como tags ("(Front, Back) => nome", ou só o nome em branches sem partes), só as branches ainda não enviadas, conclui a tarefa no Asana e no Actum e resolve o retrabalho aberto. Se o Asana falhar no meio, uma nova tentativa continua de onde parou.
          */
         post: operations["ConcluirTarefa"];
         delete?: never;
@@ -566,13 +586,19 @@ export interface components {
             tipo: null | components["schemas"]["TipoBranch"];
             /** @description Branch name */
             nome: null | string;
+            /** @description Parts the branch belongs to (`front` and/or `back`): a `base` branch must exist in the GitHub repository of each part; an `implementacao` branch is created in each of them from the most recent base branch of the task */
+            partes: null | components["schemas"]["ParteBranch"][];
         };
-        /** @description Change of a company; fields not sent are kept */
+        /** @description Change of a company; fields not sent (`null`) are kept */
         AlterarEmpresaRequest: {
             /** @description New color in hex (`#RRGGBB`) */
             cor: null | string;
             /** @description Whether the synchronization reads the tasks of this company */
             sincronizar: null | boolean;
+            /** @description GitHub repository of the front-end (`owner/repo`); empty text removes it */
+            repositorioFront?: null | string;
+            /** @description GitHub repository of the back-end (`owner/repo`); empty text removes it */
+            repositorioBack?: null | string;
         };
         /** @description Change of the internal due date and/or priority; fields not sent are kept */
         AlterarTarefaRequest: {
@@ -717,7 +743,7 @@ export interface components {
             identifier: string;
             /** @description Role: `base` or `implementacao` */
             tipo: components["schemas"]["TipoBranch"];
-            /** @description Branch name, also the tag name in the Asana */
+            /** @description Branch name */
             nome: string;
             /** @description Whether the tag is already in the Asana task */
             enviada: boolean;
@@ -731,6 +757,10 @@ export interface components {
              * @description Number of the rework open when the branch was registered
              */
             retrabalhoNumero: null | number | string;
+            /** @description Parts of the branch (`front`, `back`), in this order; empty for branches registered before the parts existed */
+            partes: components["schemas"]["ParteBranch"][];
+            /** @description Text of the tag in the Asana: `(Front, Back) =&gt; nome`, `(Front) =&gt; nome` or `(Back) =&gt; nome`; just the name when the branch has no parts */
+            tag: string;
         };
         /** @description Task card, used by the board and the list */
         CartaoTarefaResponse: {
@@ -846,6 +876,10 @@ export interface components {
              * @description When the initial load finished; `null` until the first synchronization
              */
             cargaInicialEm: null | string;
+            /** @description GitHub repository of the front-end (`owner/repo`); `null` when not defined */
+            repositorioFront: null | string;
+            /** @description GitHub repository of the back-end (`owner/repo`); `null` when not defined */
+            repositorioBack: null | string;
         };
         /** @description Company data shown with a task */
         EmpresaResumoResponse: {
@@ -965,6 +999,8 @@ export interface components {
              * @description Internal due date
              */
             prazoInterno: null | string;
+            /** @description Parts the branches belong to (`front` and/or `back`): the implementation branch is created in the GitHub repository of each part, from the last commit of the base branch */
+            partes: null | components["schemas"]["ParteBranch"][];
         };
         KeyValuePairOfstringAndStringValues: {
             key: null | string;
@@ -1017,6 +1053,12 @@ export interface components {
              */
             grupos: components["schemas"]["GrupoPainelResponse"][];
         };
+        /**
+         * @description Part of the system a branch belongs to (JSON as snake_case: `front` or `back`); each part has its own
+         *     GitHub repository in the company
+         * @enum {unknown}
+         */
+        ParteBranch: "front" | "back";
         /** @description Person following the task in the Asana, who can be mentioned in a comment */
         ParticipanteResponse: {
             /** @description User identifier in the Asana (sent back in `mencoes`) */
@@ -1706,6 +1748,46 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListarBasesRecentes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
         };
     };
     RetomarTarefa: {
@@ -1912,6 +1994,15 @@ export interface operations {
             };
             /** @description Conflict */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
                 headers: {
                     [name: string]: unknown;
                 };

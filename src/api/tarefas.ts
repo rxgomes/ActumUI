@@ -89,13 +89,16 @@ type RetrabalhoDaApi = components['schemas']['RetrabalhoResponse']
 /** Papel da branch na tarefa: `base` ou `implementacao`. */
 export type TipoBranch = components['schemas']['TipoBranch']
 
+/** Parte do sistema a que a branch pertence: `front` ou `back`; cada uma tem seu repositório no GitHub. */
+export type ParteBranch = components['schemas']['ParteBranch']
+
 /** Motivo do arquivamento: `concluida_no_asana`, `reatribuida` ou `excluida`. */
 export type MotivoArquivamento = NonNullable<components['schemas']['MotivoArquivamento']>
 
 /** Comentário da tarefa, copiado do Asana. */
 export type Comentario = components['schemas']['ComentarioResponse']
 
-/** Branch da tarefa; vira tag no Asana na conclusão. */
+/** Branch da tarefa, com as partes e o texto da tag (`tag`) que vai ao Asana na conclusão. */
 export interface Branch extends Omit<BranchDaApi, 'retrabalhoNumero'> {
   retrabalhoNumero: number | null
 }
@@ -115,11 +118,15 @@ export interface TarefaDetalhe extends Omit<DetalheDaApi, 'prioridade' | 'branch
 /** Prévia da conclusão: se é permitida (ou o motivo) e as tags que serão adicionadas no Asana. */
 export type PreviaDaConclusao = components['schemas']['ConclusaoPreviaResponse']
 
-/** Dados para iniciar uma tarefa da entrada; o prazo vai no formato `yyyy-MM-dd`. */
+/**
+ * Dados para iniciar uma tarefa da entrada; o prazo vai no formato `yyyy-MM-dd`. A API cria a branch de
+ * implementação no GitHub, a partir da base, nos repositórios das `partes`.
+ */
 export interface DadosParaIniciar {
   branchBase: string
   branchImplementacao: string
   prazoInterno: string
+  partes: ParteBranch[]
 }
 
 /** Alteração de prazo interno (`yyyy-MM-dd`) e/ou prioridade; o que não for informado é mantido. */
@@ -155,12 +162,25 @@ export async function alterarTarefa(identifier: string, dados: DadosParaAlterar)
   }))
 }
 
-/** Inicia uma tarefa da entrada com as branches e o prazo interno. */
+/**
+ * Inicia uma tarefa da entrada com as branches, as partes e o prazo interno. Lança `ErroDaApi` em falha (`400`
+ * regra, base inexistente no GitHub ou parte sem repositório; `502` GitHub indisponível); a tarefa fica como estava.
+ */
 export async function iniciarTarefa(identifier: string, dados: DadosParaIniciar): Promise<void> {
   await executar(() => cliente.POST('/tarefas/{identifier}/iniciar', {
     params: { path: { identifier } },
-    body: { branchBase: dados.branchBase, branchImplementacao: dados.branchImplementacao, prazoInterno: dados.prazoInterno },
+    body: {
+      branchBase: dados.branchBase,
+      branchImplementacao: dados.branchImplementacao,
+      prazoInterno: dados.prazoInterno,
+      partes: dados.partes,
+    },
   }))
+}
+
+/** Lista até 3 branches base usadas mais recentemente nas tarefas da mesma empresa, da mais recente para a mais antiga. */
+export function listarBasesRecentes(identifier: string): Promise<string[]> {
+  return executar(() => cliente.GET('/tarefas/{identifier}/branches-base-recentes', { params: { path: { identifier } } }))
 }
 
 /** Põe em andamento uma tarefa pausada (já iniciada ou em retrabalho). */
@@ -183,11 +203,14 @@ export async function desbloquearTarefa(identifier: string): Promise<void> {
   await executar(() => cliente.POST('/tarefas/{identifier}/desbloquear', { params: { path: { identifier } } }))
 }
 
-/** Registra uma branch. Lança `ErroDaApi` com status 409 quando o nome já existe na tarefa. */
-export async function adicionarBranch(identifier: string, tipo: TipoBranch, nome: string): Promise<void> {
+/**
+ * Registra uma branch nas partes informadas: uma base precisa existir no GitHub; uma implementação é criada no GitHub
+ * a partir da base da tarefa. Lança `ErroDaApi` com status 409 quando o nome já existe na tarefa.
+ */
+export async function adicionarBranch(identifier: string, tipo: TipoBranch, nome: string, partes: ParteBranch[]): Promise<void> {
   await executar(() => cliente.POST('/tarefas/{identifier}/branches', {
     params: { path: { identifier } },
-    body: { tipo, nome },
+    body: { tipo, nome, partes },
   }))
 }
 

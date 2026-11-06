@@ -13,6 +13,12 @@ const emit = defineEmits<{
   /** O usuário pediu para excluir uma branch pendente */
   excluir: [branch: Branch]
 }>()
+
+const NomesDasPartes = { front: 'Front', back: 'Back' } as const
+
+function textoDasPartes(branch: Branch): string {
+  return branch.partes.map((parte) => NomesDasPartes[parte]).join(' · ')
+}
 </script>
 
 <template>
@@ -29,9 +35,13 @@ const emit = defineEmits<{
           <q-icon :name="branch.tipo === 'base' ? 'account_tree' : 'call_split'" color="grey-7" />
         </q-item-section>
         <q-item-section>
-          <q-item-label class="text-weight-medium" style="font-family: monospace">{{ branch.nome }}</q-item-label>
+          <q-item-label class="text-weight-medium" style="font-family: monospace">
+            {{ branch.nome }}
+            <q-tooltip v-if="branch.partes.length > 0">Tag no Asana: {{ branch.tag }}</q-tooltip>
+          </q-item-label>
           <q-item-label caption>
             {{ branch.tipo === 'base' ? 'Base' : 'Implementação' }}
+            <template v-if="branch.partes.length > 0"> · {{ textoDasPartes(branch) }}</template>
             <template v-if="branch.retrabalhoNumero !== null"> · retrabalho {{ branch.retrabalhoNumero }}</template>
           </q-item-label>
         </q-item-section>

@@ -1,4 +1,5 @@
 import { cliente } from './cliente'
+import { formatarDataHora } from './datas'
 import { executar } from './erros'
 import { paraNumero } from './numeros'
 import type { components } from './schema'
@@ -98,6 +99,86 @@ export function progressoDoChecklist(analise: Analise): { feitos: number; total:
 /** Dúvidas numeradas, uma por linha, para colar no Asana. */
 export function textoDasDuvidas(analise: Analise): string {
   return analise.duvidas.map((duvida, indice) => `${indice + 1}. ${duvida.texto}`).join('\n')
+}
+
+/** Dados da tarefa que acompanham a análise no texto do OpenSpec. */
+export interface TarefaParaOpenSpec {
+  titulo: string
+  projetos: string
+  linkAsana: string
+  empresa: { nome: string }
+}
+
+/** Locais fixos do código do ERP Aureum, logo antes das notas do texto do `/opsx:explore`. */
+const LocaisDoExplore = [
+  '- Front: D:\\Aureum\\erp-frontend\\erp-aureum\\src\\pages\\',
+  '- Back:  Z:\\Aureum\\erp-backend\\Source\\ErpAureum\\ErpAureum\\',
+  '- Varrer os endpoints que alimentam essa lista',
+]
+
+/** Orientações fixas ao fim do texto do `/opsx:explore`. */
+const NotasDoExplore = ['1. Decisões que eu preciso tomar, com opções e recomendação.', '2. Não altere código, apenas analise.']
+
+/**
+ * Texto em Markdown pronto para colar no Claude Code: começa com `/opsx:explore <título>` e traz os dados da tarefa,
+ * o objetivo, o checklist por área, os testes, as dúvidas e as regras como listas de tarefas (`[x]` nos marcados),
+ * com os trechos vagos e a origem das regras, e termina sempre com as seções "Locais" (onde está o código do ERP)
+ * e "Notas" (orientações para a exploração).
+ * Blocos vazios são omitidos.
+ */
+export function textoParaExploreDoOpenSpec(analise: Analise, tarefa: TarefaParaOpenSpec): string {
+  const linhas: string[] = [
+    `/opsx:explore ${tarefa.titulo}`,
+    '',
+    'Demanda recebida pelo Asana e organizada pela análise com IA do Actum. Use como ponto de partida para explorar a mudança: os trechos marcados como vagos e as dúvidas ainda podem não ter resposta de quem pediu.',
+    '',
+    `- **Tarefa:** ${tarefa.titulo}`,
+    `- **Empresa:** ${tarefa.empresa.nome}`,
+  ]
+
+  if (tarefa.projetos) {
+    linhas.push(`- **Projetos:** ${tarefa.projetos}`)
+  }
+
+  linhas.push(`- **Asana:** ${tarefa.linkAsana}`)
+  linhas.push(`- **Análise:** versão ${analise.versao}, de ${formatarDataHora(analise.analisadaEm)}`)
+  linhas.push('', '## Objetivo', '', analise.objetivo.trim())
+
+  const itens = (lista: ItemDaAnalise[]) => lista.flatMap(linhasDoItem)
+
+  if (analise.checklist.length > 0) {
+    linhas.push('', '## Checklist')
+    for (const grupo of analise.checklist) {
+      linhas.push('', `### ${grupo.nome}`, '', ...itens(grupo.itens))
+    }
+  }
+
+  const secoes: [string, ItemDaAnalise[]][] = [
+    ['Testes', analise.testes],
+    ['Dúvidas para o solicitante', analise.duvidas],
+    ['Regras e observações', analise.regras],
+  ]
+  for (const [titulo, lista] of secoes) {
+    if (lista.length > 0) {
+      linhas.push('', `## ${titulo}`, '', ...itens(lista))
+    }
+  }
+
+  linhas.push('', '## Locais', '', ...LocaisDoExplore)
+  linhas.push('', '## Notas', '', ...NotasDoExplore)
+
+  return linhas.join('\n') + '\n'
+}
+
+function linhasDoItem(item: ItemDaAnalise): string[] {
+  const linhas = [`- [${item.concluido ? 'x' : ' '}] ${item.texto}`]
+  if (item.vago) {
+    linhas.push(`  - ⚠️ Vago: ${item.vago}`)
+  }
+  if (item.origem) {
+    linhas.push(`  - Origem: ${item.origem}`)
+  }
+  return linhas
 }
 
 /** Devolve a análise com o item substituído pela versão atualizada (mesmo `identifier`). */

@@ -10,8 +10,10 @@ import {
   paraAnalise,
   progressoDoChecklist,
   textoDasDuvidas,
+  textoParaExploreDoOpenSpec,
 } from './analises'
 import { cliente } from './cliente'
+import { formatarDataHora } from './datas'
 import { ErroDaApi } from './erros'
 
 vi.mock('./cliente', () => ({ cliente: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn() } }))
@@ -79,6 +81,51 @@ describe('funções da análise', () => {
 
   it('numera as dúvidas, uma por linha', () => {
     expect(textoDasDuvidas(analise)).toBe('1. texto d1\n2. texto d2')
+  })
+
+  describe('textoParaExploreDoOpenSpec', () => {
+    const tarefa = { titulo: 'Abater IPI na nota', projetos: 'Fiscal, NF-e', linkAsana: 'https://app.asana.com/0/1/2', empresa: { nome: 'Aureum' } }
+
+    it('começa com o comando e traz os dados da tarefa e o objetivo', () => {
+      const texto = textoParaExploreDoOpenSpec(analise, tarefa)
+
+      expect(texto.startsWith('/opsx:explore Abater IPI na nota\n')).toBe(true)
+      expect(texto).toContain('- **Empresa:** Aureum\n- **Projetos:** Fiscal, NF-e\n- **Asana:** https://app.asana.com/0/1/2\n')
+      expect(texto).toContain(`- **Análise:** versão 2, de ${formatarDataHora('2026-11-03T17:44:38')}`)
+      expect(texto).toContain('## Objetivo\n\nAbater o IPI.\n')
+    })
+
+    it('lista os blocos na ordem da tela, com marcação, trecho vago e origem', () => {
+      const texto = textoParaExploreDoOpenSpec(analise, tarefa)
+
+      expect(texto).toContain(
+        '## Checklist\n\n### Front\n\n- [x] texto c1\n\n### Back: cálculo\n\n- [ ] texto c2\n- [ ] texto c3\n  - ⚠️ Vago: Não diz quais fluxos.\n',
+      )
+      expect(texto).toContain('## Testes\n\n- [ ] texto t1\n')
+      expect(texto).toContain('## Dúvidas para o solicitante\n\n- [ ] texto d1\n- [ ] texto d2\n')
+      expect(texto).toContain('## Regras e observações\n\n- [ ] texto r1\n  - Origem: comentário de Maria em 04/11/2026 14:30\n')
+      const ordem = ['## Objetivo', '## Checklist', '## Testes', '## Dúvidas', '## Regras', '## Locais', '## Notas'].map((titulo) => texto.indexOf(titulo))
+      expect(ordem).toEqual([...ordem].sort((a, b) => a - b))
+    })
+
+    it('termina sempre com os locais do código e as notas para a exploração', () => {
+      const locais =
+        '## Locais\n\n- Front: D:\\Aureum\\erp-frontend\\erp-aureum\\src\\pages\\\n' +
+        '- Back:  Z:\\Aureum\\erp-backend\\Source\\ErpAureum\\ErpAureum\\\n' +
+        '- Varrer os endpoints que alimentam essa lista\n'
+      const notas = '## Notas\n\n1. Decisões que eu preciso tomar, com opções e recomendação.\n2. Não altere código, apenas analise.\n'
+
+      expect(textoParaExploreDoOpenSpec(analise, tarefa).endsWith(`\n\n${locais}\n${notas}`)).toBe(true)
+    })
+
+    it('omite blocos vazios e projetos em branco', () => {
+      const vazia: Analise = { ...analise, checklist: [], testes: [], duvidas: [], regras: [] }
+
+      const texto = textoParaExploreDoOpenSpec(vazia, { ...tarefa, projetos: '' })
+
+      expect(texto).not.toMatch(/Checklist|Testes|Dúvidas|Regras|Projetos/)
+      expect(texto).toContain('## Objetivo\n\nAbater o IPI.\n\n## Locais\n')
+    })
   })
 
   it('substitui o item atualizado em qualquer bloco', () => {

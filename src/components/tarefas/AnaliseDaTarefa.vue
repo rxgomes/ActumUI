@@ -2,7 +2,7 @@
 import { copyToClipboard, useQuasar } from 'quasar'
 import { computed, watch } from 'vue'
 
-import { type ItemDaAnalise as Item, progressoDoChecklist, textoDasDuvidas } from '@/api/analises'
+import { type ItemDaAnalise as Item, progressoDoChecklist, textoDasDuvidas, textoParaExploreDoOpenSpec } from '@/api/analises'
 import { textoDasDuvidasParaEnviar } from '@/api/comentarios'
 import { formatarDataHora } from '@/api/datas'
 import { useNotificarErro } from '@/composables/useNotificarErro'
@@ -97,6 +97,21 @@ async function copiarDuvidas(): Promise<void> {
   }
 }
 
+/** Copia a versão exibida no formato do `/opsx:explore`, para explorar a mudança no Claude Code. */
+async function copiarParaOpenSpec(): Promise<void> {
+  const detalhe = tarefa.detalhe
+  if (!exibida.value || !detalhe) {
+    return
+  }
+
+  try {
+    await copyToClipboard(textoParaExploreDoOpenSpec(exibida.value, detalhe))
+    quasar.notify({ type: 'positive', message: 'Análise copiada para o OpenSpec.', position: 'top' })
+  } catch {
+    quasar.notify({ type: 'negative', message: 'Não foi possível copiar a análise.', position: 'top' })
+  }
+}
+
 function habilitado(item: Item): boolean {
   return !analise.exibindoAnterior && !analise.marcando.has(item.identifier)
 }
@@ -120,6 +135,19 @@ function habilitado(item: Item): boolean {
           aria-label="Versão da análise"
           style="min-width: 250px"
         />
+        <q-btn
+          flat
+          no-caps
+          dense
+          color="primary"
+          icon="content_copy"
+          label="Copiar para o OpenSpec"
+          class="q-px-sm"
+          :disable="!tarefa.detalhe"
+          @click="copiarParaOpenSpec"
+        >
+          <q-tooltip>Copia a análise exibida no formato do /opsx:explore, para colar no Claude Code.</q-tooltip>
+        </q-btn>
         <q-btn
           outline
           no-caps

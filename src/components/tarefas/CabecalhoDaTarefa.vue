@@ -43,9 +43,11 @@ const botoesVisiveis = computed(() => botoes.filter((botao) => visivel(botao.aca
 </script>
 
 <template>
-  <div class="q-mb-md">
-    <q-btn flat dense no-caps icon="arrow_back" label="Voltar ao Painel" color="primary" :to="voltarPara" class="q-mb-sm" />
+  <!-- Dois nós na raiz: o Voltar rola com a página e o bloco seguinte fica fixo abaixo do cabeçalho da aplicação.
+       O sticky precisa ser filho direto da página para valer durante toda a rolagem. -->
+  <q-btn flat dense no-caps icon="arrow_back" label="Voltar ao Painel" color="primary" :to="voltarPara" class="q-mb-sm" />
 
+  <div class="cabecalho-fixo bg-grey-2 q-mb-md">
     <div class="row items-start q-col-gutter-md">
       <div class="col-12 col-md">
         <div class="row items-center q-gutter-sm q-mb-xs">
@@ -88,3 +90,16 @@ const botoesVisiveis = computed(() => botoes.filter((botao) => visivel(botao.aca
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Ocupa a largura toda da página (anula o padding do q-page) para o conteúdo rolado não aparecer pelas bordas. */
+.cabecalho-fixo {
+  position: sticky;
+  top: var(--altura-do-cabecalho, 50px);
+  z-index: 2;
+  margin-left: -16px;
+  margin-right: -16px;
+  padding: 8px 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+</style>

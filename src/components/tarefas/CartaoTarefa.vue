@@ -5,12 +5,15 @@ import { useRoute } from 'vue-router'
 import type { CartaoTarefa } from '@/api/tarefas'
 
 import { temAndamento } from './acoes'
+import { fundoDoCartao } from './grupos'
 import { prazosDoCartao } from './prazos'
 import { corDoAndamento, rotuloDoAndamento, ultimoComentarioDoCartao } from './textos'
 
 const props = defineProps<{
   /** Tarefa exibida no cartão */
   cartao: CartaoTarefa
+  /** Grupo do painel a que a tarefa pertence; define o fundo do cartão (concluídas e atrasadas) */
+  grupo: string
 }>()
 
 const route = useRoute()
@@ -18,6 +21,7 @@ const route = useRoute()
 const prazos = computed(() => prazosDoCartao(props.cartao))
 const comAndamento = computed(() => temAndamento(props.cartao.status))
 const ultimoComentario = computed(() => ultimoComentarioDoCartao(props.cartao))
+const fundo = computed(() => fundoDoCartao(props.grupo))
 
 /** Abre o detalhe levando os filtros do Painel, para a volta preservá-los. */
 const destino = computed(() => ({ name: 'detalheTarefa', params: { identifier: props.cartao.identifier }, query: route.query }))
@@ -25,7 +29,7 @@ const destino = computed(() => ({ name: 'detalheTarefa', params: { identifier: p
 
 <template>
   <router-link :to="destino" class="link-cartao" :aria-label="`Abrir a tarefa ${cartao.titulo}`">
-    <q-card flat bordered class="cartao-tarefa column">
+    <q-card flat bordered class="cartao-tarefa column" :class="fundo ? `cartao-tarefa--${fundo}` : undefined">
       <q-card-section class="q-pb-xs">
         <div class="row items-center no-wrap q-gutter-xs q-mb-xs">
           <!-- Mesmo tamanho do badge de andamento ao lado. -->
@@ -95,6 +99,14 @@ const destino = computed(() => ({ name: 'detalheTarefa', params: { identifier: p
   height: 100%;
   border-radius: 8px;
   transition: box-shadow 0.15s;
+}
+
+.cartao-tarefa--concluida {
+  background-color: var(--fundo-tarefa-concluida);
+}
+
+.cartao-tarefa--atrasada {
+  background-color: var(--fundo-tarefa-atrasada);
 }
 
 .link-cartao:hover .cartao-tarefa,

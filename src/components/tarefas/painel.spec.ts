@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import { GruposDoPainel, metadadosDoGrupo } from './grupos'
+import type { CartaoTarefa } from '@/api/tarefas'
+
+import { fundoDoCartao, GruposDoPainel, metadadosDoGrupo, separarEmAndamento } from './grupos'
 import { prazosDoCartao } from './prazos'
 import { ultimoComentarioDoCartao } from './textos'
 
@@ -61,5 +63,34 @@ describe('ultimoComentarioDoCartao', () => {
 
   it('não mostra nada quando a tarefa não tem comentários', () => {
     expect(ultimoComentarioDoCartao({ ultimoComentarioEm: null, ultimoComentarioAutor: null })).toBeNull()
+  })
+})
+
+function cartao(identifier: string, emAndamento: boolean, status: CartaoTarefa['status'] = 'em_andamento'): CartaoTarefa {
+  return { identifier, emAndamento, status } as CartaoTarefa
+}
+
+describe('separarEmAndamento', () => {
+  it('leva as tarefas em andamento para o topo com o grupo de origem e as tira dos grupos', () => {
+    const resultado = separarEmAndamento([
+      { grupo: 'atrasadas', tarefas: [cartao('a', false), cartao('b', true)] },
+      { grupo: 'hoje', tarefas: [cartao('c', true)] },
+      { grupo: 'concluidas', tarefas: [cartao('d', true, 'concluida')] },
+    ])
+
+    expect(resultado.emAndamento.map((item) => [item.grupo, item.cartao.identifier])).toEqual([['atrasadas', 'b'], ['hoje', 'c']])
+    expect(resultado.grupos.map((grupo) => [grupo.grupo, grupo.tarefas.map((tarefa) => tarefa.identifier)])).toEqual([
+      ['atrasadas', ['a']],
+      ['hoje', []],
+      ['concluidas', ['d']],
+    ])
+  })
+})
+
+describe('fundoDoCartao', () => {
+  it('destaca concluídas e atrasadas e deixa os demais grupos com o fundo padrão', () => {
+    expect(fundoDoCartao('concluidas')).toBe('concluida')
+    expect(fundoDoCartao('atrasadas')).toBe('atrasada')
+    expect(fundoDoCartao('hoje')).toBeNull()
   })
 })

@@ -5,8 +5,10 @@ import { useRoute } from 'vue-router'
 import { ehStatusDoPainel, type FiltrosDoPainel } from '@/api/tarefas'
 import PaginaCabecalho from '@/components/PaginaCabecalho.vue'
 import BarraDeSincronizacao from '@/components/tarefas/BarraDeSincronizacao.vue'
+import CartaoTarefa from '@/components/tarefas/CartaoTarefa.vue'
 import FiltrosDoPainelComponente from '@/components/tarefas/FiltrosDoPainel.vue'
 import GrupoDoPainel from '@/components/tarefas/GrupoDoPainel.vue'
+import { separarEmAndamento } from '@/components/tarefas/grupos'
 import ResumoDosGrupos from '@/components/tarefas/ResumoDosGrupos.vue'
 import { useNotificarErro } from '@/composables/useNotificarErro'
 import { usePainelStore } from '@/stores/painel'
@@ -26,6 +28,9 @@ const temFiltros = computed(() => Boolean(filtros.value.empresa || filtros.value
 
 const primeiraCarga = computed(() => painel.painel === null && painel.carregando)
 const erroSemDados = computed(() => painel.painel === null && painel.erro !== null && !painel.carregando)
+/** Tarefas em andamento vão para o topo, sem cabeçalho de grupo; os grupos exibem as demais. */
+const separados = computed(() => separarEmAndamento(painel.painel?.grupos ?? []))
+
 const vazio = computed(() => painel.painel !== null && painel.total === 0)
 
 function textoDaQuery(chave: string): string | undefined {
@@ -90,7 +95,7 @@ watch(
     </q-card>
 
     <template v-else-if="painel.painel">
-      <ResumoDosGrupos :grupos="painel.painel.grupos" />
+      <ResumoDosGrupos :grupos="separados.grupos" />
 
       <q-banner v-if="vazio" rounded class="bg-blue-1 text-grey-9 q-mb-lg">
         <template #avatar>
@@ -100,7 +105,13 @@ watch(
         <template v-else>Nenhuma tarefa aberta. Clique em Sincronizar para buscar as tarefas do Asana.</template>
       </q-banner>
 
-      <GrupoDoPainel v-for="grupo in painel.painel.grupos" :key="grupo.grupo" :grupo="grupo" />
+      <section v-if="separados.emAndamento.length > 0" class="row q-col-gutter-md q-mb-lg" aria-label="Tarefas em andamento">
+        <div v-for="item in separados.emAndamento" :key="item.cartao.identifier" class="col-12 col-sm-6 col-md-4 col-xl-3">
+          <CartaoTarefa :cartao="item.cartao" :grupo="item.grupo" />
+        </div>
+      </section>
+
+      <GrupoDoPainel v-for="grupo in separados.grupos" :key="grupo.grupo" :grupo="grupo" />
     </template>
   </q-page>
 </template>

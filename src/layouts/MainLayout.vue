@@ -6,6 +6,9 @@ import { useConexaoStore } from '@/stores/conexao'
 const ComandoDoToken = 'dotnet user-secrets set "Asana:Token" "<seu-token>" --project src/Actum.Api'
 
 const menuAberto = ref(true)
+
+/** Altura do cabeçalho (muda com o aviso do Asana); as páginas a usam para fixar conteúdo logo abaixo dele. */
+const alturaDoCabecalho = ref(50)
 const conexao = useConexaoStore()
 
 /** Texto do aviso do Asana; nulo quando não há o que avisar (verificando ou conexão válida). */
@@ -40,8 +43,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <q-layout view="hHh Lpr lFf">
+  <q-layout view="hHh Lpr lFf" :style="{ '--altura-do-cabecalho': `${alturaDoCabecalho}px` }">
     <q-header elevated class="bg-primary text-white">
+      <q-resize-observer @resize="(tamanho) => (alturaDoCabecalho = tamanho.height)" />
       <q-toolbar>
         <q-btn flat dense round icon="menu" aria-label="Mostrar ou ocultar o menu" @click="menuAberto = !menuAberto" />
         <q-toolbar-title class="text-weight-bold">Actum</q-toolbar-title>

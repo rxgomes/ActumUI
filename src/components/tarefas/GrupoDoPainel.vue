@@ -40,7 +40,7 @@ const aberto = computed(() => grupos.aberto(props.grupo.grupo))
 
         <div v-else class="row q-col-gutter-md">
           <div v-for="cartao in grupo.tarefas" :key="cartao.identifier" class="col-12 col-sm-6 col-md-4 col-xl-3">
-            <CartaoTarefa :cartao="cartao" />
+            <CartaoTarefa :cartao="cartao" :grupo="grupo.grupo" />
           </div>
         </div>
       </div>

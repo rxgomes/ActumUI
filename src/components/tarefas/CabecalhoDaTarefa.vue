@@ -43,11 +43,10 @@ const botoesVisiveis = computed(() => botoes.filter((botao) => visivel(botao.aca
 </script>
 
 <template>
-  <!-- Dois nós na raiz: o Voltar rola com a página e o bloco seguinte fica fixo abaixo do cabeçalho da aplicação.
-       O sticky precisa ser filho direto da página para valer durante toda a rolagem. -->
-  <q-btn flat dense no-caps icon="arrow_back" label="Voltar ao Painel" color="primary" :to="voltarPara" class="q-mb-sm" />
-
+  <!-- Fica fixo abaixo do cabeçalho da aplicação; o sticky é a raiz, filho direto da página, para valer em toda a rolagem. -->
   <div class="cabecalho-fixo bg-grey-2 q-mb-md">
+    <q-btn flat dense no-caps icon="arrow_back" label="Voltar ao Painel" color="primary" :to="voltarPara" class="q-mb-sm" />
+
     <div class="row items-start q-col-gutter-md">
       <div class="col-12 col-md">
         <div class="row items-center q-gutter-sm q-mb-xs">

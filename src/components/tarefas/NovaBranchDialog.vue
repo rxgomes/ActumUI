@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import { adicionarBranch, type ParteBranch, type TarefaDetalhe, type TipoBranch } from '@/api/tarefas'
 
+import { sugerirBranchDeImplementacao } from './branches'
 import { errosDoDialogo } from './errosDoDialogo'
 
 const props = defineProps<{
@@ -46,9 +47,34 @@ const explicacaoDoTipo = computed(() =>
     : 'A branch base precisa já existir no GitHub, nos repositórios das partes marcadas.',
 )
 
+// Sugestão vigente para a implementação: trocar o tipo só mexe no nome se o usuário não o alterou.
+const sugestao = ref('')
+
+const dicaDoNome = computed(() =>
+  tipo.value === 'implementacao' && sugestao.value !== '' && nome.value === sugestao.value
+    ? 'Sugestão: data de hoje e título da tarefa. Pode alterar. Vira a tag no Asana, junto com as partes.'
+    : 'Vira a tag no Asana, junto com as partes',
+)
+
+function sugerirNome(): string {
+  return sugerirBranchDeImplementacao(props.detalhe.titulo, new Date())
+}
+
+watch(tipo, (novoTipo) => {
+  if (novoTipo === 'implementacao') {
+    if (nome.value.trim() === '') {
+      sugestao.value = sugerirNome()
+      nome.value = sugestao.value
+    }
+  } else if (nome.value === sugestao.value) {
+    nome.value = ''
+  }
+})
+
 function aoAbrir(): void {
   tipo.value = 'implementacao'
-  nome.value = ''
+  sugestao.value = sugerirNome()
+  nome.value = sugestao.value
   front.value = false
   back.value = false
   errosPorCampo.value = {}
@@ -108,7 +134,7 @@ async function confirmar(): Promise<void> {
           outlined
           autofocus
           label="Nome da branch"
-          hint="Vira a tag no Asana, junto com as partes"
+          :hint="dicaDoNome"
           :error="Boolean(errosPorCampo.nome)"
           :error-message="errosPorCampo.nome"
           :disable="salvando"

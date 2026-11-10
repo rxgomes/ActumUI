@@ -143,7 +143,7 @@ A branch base do diálogo Iniciar SHALL ser um seletor com as bases recentes dev
 - **THEN** o campo MUST continuar aceitando digitação e MUST indicar que as bases recentes não puderam ser carregadas
 
 ### Requirement: Sugestão do nome da branch de implementação
-Ao abrir o diálogo Iniciar, a branch de implementação SHALL vir preenchida com `yyMMdd-` (data de hoje) seguido do título da tarefa em minúsculas, sem acentos, com cada sequência de caracteres fora de `a-z` e `0-9` trocada por um hífen e sem hífens nas pontas, limitada a 60 caracteres sem terminar em hífen. O usuário MUST poder alterar a sugestão.
+Ao abrir o diálogo Iniciar, e no diálogo Nova branch quando o tipo for implementação, o nome da branch de implementação SHALL vir preenchido com `yyMMdd-` (data de hoje) seguido do título da tarefa em minúsculas, sem acentos, com cada sequência de caracteres fora de `a-z` e `0-9` trocada por um hífen e sem hífens nas pontas, limitada a 60 caracteres sem terminar em hífen. O usuário MUST poder alterar a sugestão.
 
 #### Scenario: Título com acentos e pontuação
 - **WHEN** o diálogo é aberto em 05/11/2026 para a tarefa "Consumidor final NF-e: ajuste no cálculo"
@@ -157,8 +157,18 @@ Ao abrir o diálogo Iniciar, a branch de implementação SHALL vir preenchida co
 - **WHEN** o usuário troca a sugestão por `feature/nf-consumidor`
 - **THEN** o front MUST enviar `branchImplementacao = feature/nf-consumidor`
 
+#### Scenario: Sugestão na Nova branch
+- **WHEN** o diálogo Nova branch é aberto em 10/11/2026 para a tarefa "Ajuste IPI", com o tipo Implementação
+- **THEN** o nome MUST vir como `261110-ajuste-ipi`; ao trocar para Base sem ter alterado o nome, o campo MUST ficar vazio, e ao voltar para Implementação com o campo vazio, a sugestão MUST voltar
+
 ### Requirement: Iniciar tarefa reaberta
-Quando a API indicar `novaBranchSugerida = true`, o Iniciar SHALL abrir um diálogo com as opções "Criar nova branch" (marcada ao abrir) e "Continuar na branch atual". Criar nova branch MUST pedir base, implementação e partes, como o primeiro início e sem o prazo, e enviá-las no retomar. Continuar MUST só retomar. Sem a indicação, o Iniciar de uma tarefa pausada MUST retomar direto.
+Quando a API indicar `novaBranchSugerida = true` numa tarefa `em_andamento` (nunca iniciada no Actum, como as da carga inicial, em qualquer grupo do painel), o Iniciar SHALL abrir o mesmo diálogo do primeiro início, com as bases recentes e a implementação sugerida, pedindo base, implementação e partes sem o prazo, sem a opção de continuar, e enviá-las no retomar.
+
+#### Scenario: Primeiro início fora da entrada
+- **WHEN** o usuário inicia uma tarefa da carga inicial no grupo Hoje, escolhe a base `main`, aceita a implementação sugerida `261110-ajuste-ipi` e marca Back
+- **THEN** o front MUST enviar ao retomar `branchBase = main`, `branchImplementacao = 261110-ajuste-ipi` e `partes = ["back"]`
+
+Em `retrabalho`, quando a API indicar `novaBranchSugerida = true`, o Iniciar SHALL abrir um diálogo com as opções "Criar nova branch" (marcada ao abrir) e "Continuar na branch atual". Criar nova branch MUST pedir base, implementação e partes, como o primeiro início e sem o prazo, e enviá-las no retomar. Continuar MUST só retomar. Sem a indicação, o Iniciar de uma tarefa pausada MUST retomar direto.
 
 #### Scenario: Nova branch no retrabalho
 - **WHEN** o usuário inicia uma tarefa em `retrabalho` com `novaBranchSugerida = true`, mantém "Criar nova branch", escolhe a base `main`, aceita a implementação sugerida `261106-ajuste-ipi` e marca Back

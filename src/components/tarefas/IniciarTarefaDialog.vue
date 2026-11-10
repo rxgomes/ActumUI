@@ -8,7 +8,10 @@ import CampoDeData from './CampoDeData.vue'
 import { errosDoDialogo } from './errosDoDialogo'
 
 const props = defineProps<{
-  /** Tarefa a iniciar: na entrada pede as branches e o prazo; reaberta, oferece criar uma nova branch ou continuar */
+  /**
+   * Tarefa a iniciar: na entrada pede as branches e o prazo; nunca iniciada no Actum, pede as branches; reaberta,
+   * oferece criar uma nova branch ou continuar
+   */
   detalhe: TarefaDetalhe
 }>()
 
@@ -28,8 +31,12 @@ const OpcoesDoRetrabalho: { label: string; value: Escolha }[] = [
   { label: 'Continuar na branch atual', value: 'continuar' },
 ]
 
-/** Fora da entrada, a tarefa foi reaberta: o diálogo retoma, com ou sem nova branch. */
-const retrabalho = computed(() => props.detalhe.status !== 'entrada')
+/** Na entrada, o início pede as branches e o prazo interno. */
+const naEntrada = computed(() => props.detalhe.status === 'entrada')
+/** Reaberta, a tarefa retoma com ou sem nova branch. */
+const retrabalho = computed(() => props.detalhe.status === 'retrabalho')
+// Fora desses dois casos, a tarefa nunca foi iniciada no Actum (ex.: carga inicial): retoma criando as branches, como
+// na entrada, mas sem pedir o prazo, que ela já tem.
 const escolha = ref<Escolha>('novaBranch')
 const criandoBranch = computed(() => !retrabalho.value || escolha.value === 'novaBranch')
 
@@ -125,7 +132,7 @@ function aoDigitarBase(valor: string): void {
 
 function enviar(): Promise<void> {
   const identifier = props.detalhe.identifier
-  if (!retrabalho.value) {
+  if (naEntrada.value) {
     return iniciarTarefa(identifier, {
       branchBase: branchBase.value.trim(),
       branchImplementacao: branchImplementacao.value,
@@ -134,7 +141,7 @@ function enviar(): Promise<void> {
     })
   }
 
-  if (escolha.value === 'continuar') {
+  if (retrabalho.value && escolha.value === 'continuar') {
     return retomarTarefa(identifier)
   }
 
@@ -213,7 +220,7 @@ async function confirmar(): Promise<void> {
             :error-message="errosPorCampo.branchImplementacao"
             :disable="salvando"
           />
-          <CampoDeData v-if="!retrabalho" v-model="prazoInterno" label="Prazo interno" :erro="errosPorCampo.prazoInterno" />
+          <CampoDeData v-if="naEntrada" v-model="prazoInterno" label="Prazo interno" :erro="errosPorCampo.prazoInterno" />
 
           <div>
             <div class="text-body2 text-grey-8">Partes</div>

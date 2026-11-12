@@ -2,13 +2,24 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { cliente } from './cliente'
 import { ErroDaApi } from './erros'
-import { adicionarBranch, alterarTarefa, concluirTarefa, iniciarTarefa, listarBasesRecentes, obterTarefa, retomarTarefa } from './tarefas'
+import {
+  adicionarBranch,
+  alterarTarefa,
+  concluirTarefa,
+  criarWorktree,
+  iniciarTarefa,
+  listarBasesRecentes,
+  obterTarefa,
+  removerWorktree,
+  retomarTarefa,
+} from './tarefas'
 
 vi.mock('./cliente', () => ({ cliente: { GET: vi.fn(), POST: vi.fn(), PATCH: vi.fn(), DELETE: vi.fn() } }))
 
 const get = vi.mocked(cliente.GET)
 const post = vi.mocked(cliente.POST)
 const patch = vi.mocked(cliente.PATCH)
+const del = vi.mocked(cliente.DELETE)
 
 function resposta(status: number, corpo: { data?: unknown; error?: unknown } = {}) {
   return { ...corpo, response: new Response(null, { status }) } as never
@@ -164,5 +175,36 @@ describe('detalhe e ações da tarefa', () => {
       status: 502,
       message: 'Não foi possível comunicar com o Asana. Tente novamente em instantes.',
     })
+  })
+
+  it('cria o worktree da branch e devolve a branch com o retrabalho como número', async () => {
+    const worktree = {
+      pasta: 'E:\wt\aureum\fix-x',
+      situacao: 'falhou',
+      partes: [{ parte: 'front', caminho: 'E:\wt\aureum\fix-x\front', situacao: 'falhou', erro: 'O git não conseguiu criar o worktree', criadoEm: null }],
+      comandoClaude: "cd 'E:\wt\aureum\fix-x'; claude",
+    }
+    post.mockResolvedValue(resposta(200, { data: { ...detalheDaApi.branches[1], worktree } }))
+
+    const branch = await criarWorktree('t1', 'b2')
+
+    expect(post).toHaveBeenCalledWith('/tarefas/{identifier}/branches/{branchIdentifier}/worktree', {
+      params: { path: { identifier: 't1', branchIdentifier: 'b2' } },
+    })
+    expect(branch.retrabalhoNumero).toBe(1)
+    expect(branch.worktree).toEqual(worktree)
+  })
+
+  it('lança 409 com as pendências quando o worktree não pode ser removido', async () => {
+    const detail = 'O worktree não foi removido para não perder trabalho (back: 2 alterações não commitadas).'
+    del.mockResolvedValue(resposta(409, { error: { title: 'Conflito.', status: 409, detail } }))
+
+    const erro = await removerWorktree('t1', 'b2').catch((falha: unknown) => falha)
+
+    expect(del).toHaveBeenCalledWith('/tarefas/{identifier}/branches/{branchIdentifier}/worktree', {
+      params: { path: { identifier: 't1', branchIdentifier: 'b2' } },
+    })
+    expect(erro).toBeInstanceOf(ErroDaApi)
+    expect(erro).toMatchObject({ status: 409, message: detail })
   })
 })

@@ -7,6 +7,8 @@ vi.mock('./cliente', () => ({ cliente: { PATCH: vi.fn() } }))
 
 const patch = vi.mocked(cliente.PATCH)
 
+const SemPastasLocais = { cloneFront: null, cloneBack: null, pastaWorktrees: null, arquivosFront: null, arquivosBack: null }
+
 const empresa = {
   identifier: 'e1',
   nome: 'aremas.com.br',
@@ -15,6 +17,11 @@ const empresa = {
   cargaInicialEm: null,
   repositorioFront: null,
   repositorioBack: null,
+  cloneFront: null,
+  cloneBack: null,
+  pastaWorktrees: null,
+  arquivosFront: [],
+  arquivosBack: [],
 }
 
 function resposta(status: number, corpo: { data?: unknown; error?: unknown }) {
@@ -33,7 +40,7 @@ describe('alterarEmpresa', () => {
 
     expect(patch).toHaveBeenCalledWith('/empresas/{identifier}', {
       params: { path: { identifier: 'e1' } },
-      body: { cor: null, sincronizar: false, repositorioFront: null, repositorioBack: null },
+      body: { cor: null, sincronizar: false, repositorioFront: null, repositorioBack: null, ...SemPastasLocais },
     })
     expect(alterada).toEqual(empresa)
   })
@@ -45,7 +52,7 @@ describe('alterarEmpresa', () => {
 
     expect(patch).toHaveBeenCalledWith('/empresas/{identifier}', {
       params: { path: { identifier: 'e1' } },
-      body: { cor: null, sincronizar: null, repositorioFront: 'ixact/erp-web', repositorioBack: '' },
+      body: { cor: null, sincronizar: null, repositorioFront: 'ixact/erp-web', repositorioBack: '', ...SemPastasLocais },
     })
     expect(alterada.repositorioFront).toBe('ixact/erp-web')
   })
@@ -72,7 +79,39 @@ describe('alterarEmpresa', () => {
 
     expect(patch).toHaveBeenCalledWith('/empresas/{identifier}', {
       params: { path: { identifier: 'e1' } },
-      body: { cor: '#7b1fa2', sincronizar: null, repositorioFront: null, repositorioBack: null },
+      body: { cor: '#7b1fa2', sincronizar: null, repositorioFront: null, repositorioBack: null, ...SemPastasLocais },
+    })
+  })
+
+  it('envia as pastas locais e as listas de arquivos, com texto vazio para remover e lista vazia para limpar', async () => {
+    patch.mockResolvedValue(resposta(200, { data: { ...empresa, cloneFront: 'E:\\src\\erp-web' } }))
+
+    await alterarEmpresa('e1', { cloneFront: 'E:\\src\\erp-web', cloneBack: '', arquivosFront: ['.env.development'], arquivosBack: [] })
+
+    expect(patch).toHaveBeenCalledWith('/empresas/{identifier}', {
+      params: { path: { identifier: 'e1' } },
+      body: {
+        cor: null,
+        sincronizar: null,
+        repositorioFront: null,
+        repositorioBack: null,
+        cloneFront: 'E:\\src\\erp-web',
+        cloneBack: '',
+        pastaWorktrees: null,
+        arquivosFront: ['.env.development'],
+        arquivosBack: [],
+      },
+    })
+  })
+
+  it('devolve a mensagem da regra quando a API recusa o clone', async () => {
+    patch.mockResolvedValue(resposta(400, {
+      error: { status: 400, detail: 'O clone de back (E:\\src\\erp-web) aponta para ixact/erp-web, mas o repositório de back da empresa é ixact/erp-api.' },
+    }))
+
+    await expect(alterarEmpresa('e1', { cloneBack: 'E:\\src\\erp-web' })).rejects.toMatchObject({
+      status: 400,
+      message: 'O clone de back (E:\\src\\erp-web) aponta para ixact/erp-web, mas o repositório de back da empresa é ixact/erp-api.',
     })
   })
 

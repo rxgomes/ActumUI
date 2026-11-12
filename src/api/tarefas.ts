@@ -98,6 +98,15 @@ export type MotivoArquivamento = NonNullable<components['schemas']['MotivoArquiv
 /** Comentário da tarefa, copiado do Asana. */
 export type Comentario = components['schemas']['ComentarioResponse']
 
+/** Situação do worktree de uma branch ou de uma parte: `criado`, `falhou` ou `removido`. */
+export type SituacaoWorktree = components['schemas']['SituacaoWorktree']
+
+/** Worktrees locais de uma branch de implementação: a pasta da tarefa, as partes e o comando do Claude Code. */
+export type Worktree = components['schemas']['WorktreeResponse']
+
+/** Worktree de uma parte (front ou back), com o caminho, a situação e o erro da última tentativa. */
+export type WorktreeParte = components['schemas']['WorktreeParteResponse']
+
 /** Branch da tarefa, com as partes e o texto da tag (`tag`) que vai ao Asana na conclusão. */
 export interface Branch extends Omit<BranchDaApi, 'retrabalhoNumero'> {
   retrabalhoNumero: number | null
@@ -239,6 +248,30 @@ export async function adicionarBranch(identifier: string, tipo: TipoBranch, nome
 /** Exclui uma branch ainda não enviada ao Asana. */
 export async function removerBranch(identifier: string, branchIdentifier: string): Promise<void> {
   await executar(() => cliente.DELETE('/tarefas/{identifier}/branches/{branchIdentifier}', {
+    params: { path: { identifier, branchIdentifier } },
+  }))
+}
+
+/**
+ * Cria (ou recria) os worktrees locais de uma branch de implementação e devolve a branch com o worktree. Uma falha
+ * numa parte vem na própria branch (`situacao = falhou`, `erro`), não como erro. Lança `ErroDaApi` com `400` quando a
+ * branch é base ou a empresa não tem as pastas locais configuradas, e `404` para tarefa ou branch inexistente.
+ */
+export async function criarWorktree(identifier: string, branchIdentifier: string): Promise<Branch> {
+  const branch = await executar(() => cliente.POST('/tarefas/{identifier}/branches/{branchIdentifier}/worktree', {
+    params: { path: { identifier, branchIdentifier } },
+  }))
+
+  return { ...branch, retrabalhoNumero: paraNumeroOuNulo(branch.retrabalhoNumero) }
+}
+
+/**
+ * Remove os worktrees locais de uma branch. Lança `ErroDaApi` com `409` quando alguma parte tem alterações não
+ * commitadas ou commits não enviados (a mensagem lista as pendências e nada é removido), `400` quando um arquivo
+ * está em uso e `404` quando não há worktree ativo.
+ */
+export async function removerWorktree(identifier: string, branchIdentifier: string): Promise<void> {
+  await executar(() => cliente.DELETE('/tarefas/{identifier}/branches/{branchIdentifier}/worktree', {
     params: { path: { identifier, branchIdentifier } },
   }))
 }

@@ -33,12 +33,12 @@ onMounted(carregar)
   <q-page padding>
     <PaginaCabecalho titulo="Empresas" />
 
-    <div class="text-body2 text-grey-8 q-mb-md" style="max-width: 760px">
+    <div class="text-body2 text-grey-8 q-mb-md" style="max-width: 960px">
       Cada empresa é um workspace do Asana. A cor identifica as tarefas dela no Painel. Uma empresa fora da sincronização
       não é consultada no Asana; as tarefas dela já sincronizadas continuam no Actum.
     </div>
 
-    <q-card v-if="carregando && !empresas" flat bordered style="max-width: 760px">
+    <q-card v-if="carregando && !empresas" flat bordered style="max-width: 960px">
       <q-item v-for="n in 3" :key="n" class="q-py-md">
         <q-item-section avatar><q-skeleton type="QAvatar" size="40px" square /></q-item-section>
         <q-item-section><q-skeleton type="text" width="40%" /><q-skeleton type="text" width="60%" /></q-item-section>
@@ -70,7 +70,7 @@ onMounted(carregar)
       </q-card-actions>
     </q-card>
 
-    <q-card v-else-if="empresas" flat bordered style="max-width: 760px">
+    <q-card v-else-if="empresas" flat bordered style="max-width: 960px">
       <q-list separator>
         <LinhaDaEmpresa v-for="empresa in empresas" :key="empresa.identifier" :empresa="empresa" @alterada="aoAlterar" />
       </q-list>

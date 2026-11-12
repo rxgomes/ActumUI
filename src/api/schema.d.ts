@@ -360,9 +360,33 @@ export interface paths {
         post?: never;
         /**
          * Excluir branch
-         * @description Exclui uma branch ainda não enviada ao Asana (para corrigir erro de digitação). Branches enviadas não podem ser excluídas. A branch não é excluída no GitHub.
+         * @description Exclui uma branch ainda não enviada ao Asana (para corrigir erro de digitação). Branches enviadas ou com worktree ativo no PC não podem ser excluídas. A branch não é excluída no GitHub.
          */
         delete: operations["RemoverBranch"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tarefas/{identifier}/branches/{branchIdentifier}/worktree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Criar ou recriar worktree
+         * @description Cria, no clone local de cada parte da branch de implementação, o worktree da branch em <pastaWorktrees>\<branch>\front e ...\back, e copia do clone os arquivos fora do git configurados na empresa. Idempotente: as partes já criadas são mantidas; recria na mesma pasta um worktree removido. A falha numa parte não muda o status da resposta: ela fica na parte (situacao = falhou, erro). Exige a pasta dos worktrees e os clones das partes na empresa.
+         */
+        post: operations["CriarWorktree"];
+        /**
+         * Remover worktree
+         * @description Remove os worktrees da branch nos clones locais, sem forçar, e apaga a pasta da tarefa se ficar vazia. Recusado com 409, sem remover nada, quando alguma parte tem alterações não commitadas ou commits não enviados. Arquivo em uso (IDE aberta, servidor rodando) devolve 400.
+         */
+        delete: operations["RemoverWorktree"];
         options?: never;
         head?: never;
         patch?: never;
@@ -599,6 +623,16 @@ export interface components {
             repositorioFront?: null | string;
             /** @description GitHub repository of the back-end (`owner/repo`); empty text removes it */
             repositorioBack?: null | string;
+            /** @description Folder (absolute path) of the local clone of the front-end; must be a git repository whose `origin` is RepositorioFront; empty text removes it */
+            cloneFront?: null | string;
+            /** @description Folder (absolute path) of the local clone of the back-end; must be a git repository whose `origin` is RepositorioBack; empty text removes it */
+            cloneBack?: null | string;
+            /** @description Root folder (absolute path) of the worktrees of the tasks; created when needed; empty text removes it */
+            pastaWorktrees?: null | string;
+            /** @description Files outside the git to copy from the front-end clone to each new worktree (relative paths, at most 20); replaces the list; an empty list clears it */
+            arquivosFront?: null | string[];
+            /** @description Files outside the git to copy from the back-end clone to each new worktree (relative paths, at most 20); replaces the list; an empty list clears it */
+            arquivosBack?: null | string[];
         };
         /** @description Change of the internal due date and/or priority; fields not sent are kept */
         AlterarTarefaRequest: {
@@ -761,6 +795,7 @@ export interface components {
             partes: components["schemas"]["ParteBranch"][];
             /** @description Text of the tag in the Asana: `(Front, Back) =&gt; nome`, `(Front) =&gt; nome` or `(Back) =&gt; nome`; just the name when the branch has no parts */
             tag: string;
+            worktree: null | components["schemas"]["WorktreeResponse"];
         };
         /** @description Task card, used by the board and the list */
         CartaoTarefaResponse: {
@@ -880,6 +915,16 @@ export interface components {
             repositorioFront: null | string;
             /** @description GitHub repository of the back-end (`owner/repo`); `null` when not defined */
             repositorioBack: null | string;
+            /** @description Folder of the local clone of the front-end repository; `null` when not defined */
+            cloneFront: null | string;
+            /** @description Folder of the local clone of the back-end repository; `null` when not defined */
+            cloneBack: null | string;
+            /** @description Root folder of the worktrees of the tasks (`&lt;pasta&gt;\&lt;branch&gt;\front` and `...\back`); `null` when not defined */
+            pastaWorktrees: null | string;
+            /** @description Files outside the git copied from the front-end clone to each new worktree (paths relative to the repository) */
+            arquivosFront: string[];
+            /** @description Files outside the git copied from the back-end clone to each new worktree (paths relative to the repository) */
+            arquivosBack: string[];
         };
         /** @description Company data shown with a task */
         EmpresaResumoResponse: {
@@ -1206,6 +1251,12 @@ export interface components {
             erro: null | string;
         };
         /**
+         * @description Situation of a worktree or of one of its parts (JSON and database as snake_case: `criado`, `falhou`,
+         *     `removido`)
+         * @enum {unknown}
+         */
+        SituacaoWorktree: "criado" | "falhou" | "removido";
+        /**
          * @description Internal status of a task in the Actum (stored as snake_case text, e.g. `em_andamento`)
          * @enum {unknown}
          */
@@ -1310,7 +1361,7 @@ export interface components {
             retrabalhos: components["schemas"]["RetrabalhoResponse"][];
             /** @description Every comment, oldest first */
             comentarios: components["schemas"]["ComentarioResponse"][];
-            /** @description Whether a new implementation branch is suggested when resuming: the task is in rework and the open rework has no implementation branch yet (`POST /tarefas/{identifier}/retomar` with a body) */
+            /** @description Whether a new implementation branch is suggested when resuming: the task is in progress without any implementation branch (never started in the Actum, e.g. from the initial load), or in rework and the open rework has no implementation branch yet (`POST /tarefas/{identifier}/retomar` with a body) */
             novaBranchSugerida: boolean;
         };
         /** @description Task in the ranking of reworks of the period */
@@ -1347,6 +1398,33 @@ export interface components {
          * @enum {unknown}
          */
         TipoItemAnalise: "checklist" | "teste" | "duvida" | "regra";
+        /** @description Git worktree of one part of an implementation branch */
+        WorktreeParteResponse: {
+            /** @description Part (`front` or `back`) */
+            parte: components["schemas"]["ParteBranch"];
+            /** @description Folder of the worktree */
+            caminho: string;
+            /** @description Situation (`criado`, `falhou` or `removido`) */
+            situacao: components["schemas"]["SituacaoWorktree"];
+            /** @description Error of the last attempt, in pt-BR; `null` when it succeeded */
+            erro: null | string;
+            /**
+             * Format: date-time
+             * @description When the worktree was created
+             */
+            criadoEm: null | string;
+        };
+        /** @description Local worktrees of an implementation branch: one folder per task with one git worktree per part inside it */
+        WorktreeResponse: {
+            /** @description Folder of the task (`&lt;pastaWorktrees&gt;\&lt;branch&gt;`), with `front` and `back` inside it */
+            pasta: string;
+            /** @description Overall situation: `removido` when removed; otherwise `falhou` when a part is not created; otherwise `criado` */
+            situacao: components["schemas"]["SituacaoWorktree"];
+            /** @description Worktree of each part, in the order front, back */
+            partes: components["schemas"]["WorktreeParteResponse"][];
+            /** @description PowerShell command that opens the Claude Code in the folder of the task (e.g. `cd 'E:\wt\aureum\x'; claude`) */
+            comandoClaude: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -2084,6 +2162,106 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CriarWorktree: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+                branchIdentifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BranchResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    RemoverWorktree: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+                branchIdentifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BranchResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
                 headers: {
                     [name: string]: unknown;
                 };

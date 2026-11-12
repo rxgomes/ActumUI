@@ -20,12 +20,22 @@ export interface DadosDaEmpresa {
   repositorioFront?: string
   /** Repositório do back no GitHub (`dono/repo`); texto vazio remove */
   repositorioBack?: string
+  /** Pasta do clone local do front (caminho absoluto); texto vazio remove */
+  cloneFront?: string
+  /** Pasta do clone local do back (caminho absoluto); texto vazio remove */
+  cloneBack?: string
+  /** Pasta raiz dos worktrees das tarefas (caminho absoluto); texto vazio remove */
+  pastaWorktrees?: string
+  /** Arquivos fora do git copiados do clone do front para cada worktree novo; lista vazia limpa */
+  arquivosFront?: string[]
+  /** Arquivos fora do git copiados do clone do back para cada worktree novo; lista vazia limpa */
+  arquivosBack?: string[]
 }
 
 /**
- * Altera a cor, a participação na sincronização e/ou os repositórios da empresa e devolve a empresa atualizada.
- * Lança `ErroDaApi` em falha (`400` com `errosPorCampo.cor`, `repositorioFront` ou `repositorioBack` para valor
- * inválido, `404` para empresa inexistente).
+ * Altera a cor, a participação na sincronização, os repositórios e/ou as pastas locais da empresa e devolve a empresa
+ * atualizada. Lança `ErroDaApi` em falha (`400` com `errosPorCampo` para formato inválido, ou com a mensagem da regra,
+ * como clone de outro repositório ou caminho relativo; `404` para empresa inexistente).
  */
 export function alterarEmpresa(identifier: string, dados: DadosDaEmpresa): Promise<Empresa> {
   return executar(() => cliente.PATCH('/empresas/{identifier}', {
@@ -35,6 +45,11 @@ export function alterarEmpresa(identifier: string, dados: DadosDaEmpresa): Promi
       sincronizar: dados.sincronizar ?? null,
       repositorioFront: dados.repositorioFront ?? null,
       repositorioBack: dados.repositorioBack ?? null,
+      cloneFront: dados.cloneFront ?? null,
+      cloneBack: dados.cloneBack ?? null,
+      pastaWorktrees: dados.pastaWorktrees ?? null,
+      arquivosFront: dados.arquivosFront ?? null,
+      arquivosBack: dados.arquivosBack ?? null,
     },
   }))
 }

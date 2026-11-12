@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { useQuasar } from 'quasar'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 import { formatarDataHora } from '@/api/datas'
 import { alterarEmpresa, type Empresa } from '@/api/empresas'
 import { errosDoDialogo } from '@/components/tarefas/errosDoDialogo'
+import { faltasDasPastasLocais } from '@/components/tarefas/worktrees'
 import { useNotificarErro } from '@/composables/useNotificarErro'
 
 import { PaletaDasEmpresas } from './paleta'
+import PastasLocaisDaEmpresa from './PastasLocaisDaEmpresa.vue'
 
 const props = defineProps<{
   /** Empresa exibida na linha */
@@ -21,6 +23,8 @@ const emit = defineEmits<{
 
 const quasar = useQuasar()
 const notificarErro = useNotificarErro()
+
+const faltasLocais = computed(() => faltasDasPastasLocais(props.empresa))
 
 const salvandoSincronizacao = ref(false)
 const salvandoCor = ref(false)
@@ -134,6 +138,13 @@ async function salvarCor(): Promise<void> {
       <q-item-label caption>
         Front: {{ empresa.repositorioFront ?? 'não definido' }} · Back: {{ empresa.repositorioBack ?? 'não definido' }}
       </q-item-label>
+      <q-item-label caption>
+        <template v-if="faltasLocais.length === 0">
+          Pastas locais: configuradas
+          <q-tooltip>Worktrees em {{ empresa.pastaWorktrees }}</q-tooltip>
+        </template>
+        <template v-else>Pastas locais: falta {{ faltasLocais.join(', ') }}</template>
+      </q-item-label>
       <q-item-label v-if="!empresa.sincronizar" caption class="text-warning">
         Fora da sincronização: não é consultada no Asana.
       </q-item-label>
@@ -196,6 +207,8 @@ async function salvarCor(): Promise<void> {
             </q-card>
           </q-popup-proxy>
         </q-btn>
+
+        <PastasLocaisDaEmpresa :empresa="empresa" :desabilitado="salvandoSincronizacao" @alterada="emit('alterada', $event)" />
 
         <q-btn
           outline

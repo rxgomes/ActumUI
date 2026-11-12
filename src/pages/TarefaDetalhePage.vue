@@ -3,7 +3,16 @@ import { useQuasar } from 'quasar'
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
-import { type Branch, bloquearTarefa, desbloquearTarefa, pausarTarefa, removerBranch, retomarTarefa } from '@/api/tarefas'
+import {
+  type Branch,
+  bloquearTarefa,
+  criarWorktree,
+  desbloquearTarefa,
+  pausarTarefa,
+  removerBranch,
+  removerWorktree,
+  retomarTarefa,
+} from '@/api/tarefas'
 import type { AcaoDaTarefa } from '@/components/tarefas/acoes'
 import AnotacoesDaTarefa from '@/components/tarefas/AnotacoesDaTarefa.vue'
 import AnaliseDaTarefa from '@/components/tarefas/AnaliseDaTarefa.vue'
@@ -16,6 +25,7 @@ import IniciarTarefaDialog from '@/components/tarefas/IniciarTarefaDialog.vue'
 import NovaBranchDialog from '@/components/tarefas/NovaBranchDialog.vue'
 import NovoPrazoDialog from '@/components/tarefas/NovoPrazoDialog.vue'
 import RetrabalhosDaTarefa from '@/components/tarefas/RetrabalhosDaTarefa.vue'
+import { partesComFalha } from '@/components/tarefas/worktrees'
 import { useNotificarErro } from '@/composables/useNotificarErro'
 import { useTarefaStore } from '@/stores/tarefa'
 
@@ -36,6 +46,7 @@ const novaBranchAberto = ref(false)
 const concluirAberto = ref(false)
 const executando = ref<AcaoDaTarefa | null>(null)
 const excluindoBranch = ref<string | null>(null)
+const processandoWorktree = ref<{ branch: string; acao: 'criar' | 'remover' } | null>(null)
 
 watch(identifier, (novo) => void tarefa.carregar(novo), { immediate: true })
 
@@ -121,6 +132,47 @@ function excluirBranch(branch: Branch): void {
       }
     })
 }
+
+async function criarWorktreeDaBranch(branch: Branch): Promise<void> {
+  processandoWorktree.value = { branch: branch.identifier, acao: 'criar' }
+  try {
+    const criada = await criarWorktree(identifier.value, branch.identifier)
+    // Falha numa parte vem no corpo (200), não como erro: avisa em vez de dar sucesso.
+    if (partesComFalha(criada.worktree ?? null).length > 0) {
+      quasar.notify({ type: 'warning', position: 'top', timeout: 6000, message: 'O worktree não foi criado em todas as partes. Veja o erro na branch.' })
+      await tarefa.recarregar()
+    } else {
+      await aposAcao('Worktree criado.')
+    }
+  } catch (erro) {
+    notificarErro(erro)
+  } finally {
+    processandoWorktree.value = null
+  }
+}
+
+function removerWorktreeDaBranch(branch: Branch): void {
+  quasar
+    .dialog({
+      title: 'Remover worktree',
+      message: `Remover as pastas da branch "${branch.nome}" no PC? A branch continua no GitHub e na tarefa. Alterações não commitadas ou commits não enviados impedem a remoção.`,
+      cancel: { label: 'Cancelar', flat: true, noCaps: true },
+      ok: { label: 'Remover', color: 'negative', unelevated: true, noCaps: true },
+      persistent: true,
+    })
+    .onOk(async () => {
+      processandoWorktree.value = { branch: branch.identifier, acao: 'remover' }
+      try {
+        await removerWorktree(identifier.value, branch.identifier)
+        await aposAcao('Worktree removido.')
+      } catch (erro) {
+        // 409 (pendências) e 400 (arquivo em uso) trazem a orientação no detail.
+        notificarErro(erro)
+      } finally {
+        processandoWorktree.value = null
+      }
+    })
+}
 </script>
 
 <template>
@@ -167,7 +219,14 @@ function excluirBranch(branch: Branch): void {
       <div class="row q-col-gutter-md">
         <div class="col-12 col-lg-7">
           <DadosDaTarefa :detalhe="tarefa.detalhe" />
-          <BranchesDaTarefa :branches="tarefa.detalhe.branches" :excluindo="excluindoBranch" @excluir="excluirBranch" />
+          <BranchesDaTarefa
+            :branches="tarefa.detalhe.branches"
+            :excluindo="excluindoBranch"
+            :processando-worktree="processandoWorktree"
+            @excluir="excluirBranch"
+            @criar-worktree="criarWorktreeDaBranch"
+            @remover-worktree="removerWorktreeDaBranch"
+          />
           <AnotacoesDaTarefa :identifier="tarefa.detalhe.identifier" />
         </div>
         <div class="col-12 col-lg-5">

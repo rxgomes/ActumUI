@@ -447,7 +447,7 @@ export interface paths {
         put?: never;
         /**
          * Analisar a demanda com IA
-         * @description Envia à Claude API o contexto completo da tarefa (empresa, título, descrição, projetos, comentários e retrabalhos) e grava o objetivo, o checklist e as dúvidas como nova versão atual. Itens iguais a itens marcados na versão anterior já entram marcados. Chamada paga; pode levar dezenas de segundos.
+         * @description Envia à Claude API a empresa, o título e os projetos da tarefa e as fontes escolhidas no corpo (opcional): no modo tarefa, a descrição, os comentários com os retrabalhos e anexos do Asana (PDF, imagens, texto, Word e Excel); no modo prompt, o texto escrito pelo usuário com os anexos que ele cita. Sem corpo, envia a descrição e os comentários. Grava o objetivo, o checklist, os testes, as dúvidas e as regras, com origem e trecho, e as fontes usadas como nova versão atual. Itens iguais a itens marcados na versão anterior já entram marcados. Chamada paga; pode levar dezenas de segundos, mais com anexos.
          */
         post: operations["AnalisarTarefa"];
         delete?: never;
@@ -474,26 +474,6 @@ export interface paths {
          * @description Marca (item do checklist feito, dúvida resolvida) ou desmarca um item da análise atual. Itens de versões anteriores não podem ser alterados. Nada é enviado ao Asana.
          */
         patch: operations["MarcarItemDaAnalise"];
-        trace?: never;
-    };
-    "/tarefas/{identifier}/anexos": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Anexos da tarefa
-         * @description Lê do Asana, na hora, os arquivos anexados à tarefa e aos seus comentários, do mais antigo para o mais recente.
-         */
-        get: operations["ListarAnexos"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
     "/tarefas/{identifier}/participantes": {
@@ -530,6 +510,46 @@ export interface paths {
          * @description Formulário multipart com texto, menções (gid dos participantes) e arquivos (até 10, 25 MB cada, 50 MB no total). Anexa os arquivos à tarefa no Asana e publica o comentário com as menções e a lista de anexos; o comentário fica registrado no Actum como lido. Se parte dos anexos já tiver sido enviada quando algo falhar, a resposta traz anexosEnviados.
          */
         post: operations["EnviarComentario"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tarefas/{identifier}/anexos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Anexos da tarefa
+         * @description Lê do Asana, na hora, os arquivos anexados à tarefa e aos seus comentários, do mais antigo para o mais recente.
+         */
+        get: operations["ListarAnexos"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tarefas/{identifier}/anexos/{anexoGid}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Baixar anexo
+         * @description Pede ao Asana um endereço novo para baixar o anexo (os endereços do Asana expiram em poucos minutos) e redireciona para ele. Para arquivos externos (Google Drive, Dropbox...), redireciona para o endereço de abertura.
+         */
+        get: operations["BaixarAnexo"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -695,13 +715,14 @@ export interface components {
              */
             concluidoEm: null | string;
             /**
-             * @description Where a rule or the excerpt of a question came from (`descrição` or
-             *     `comentário de Maria em 04/11/2026 14:30`); `null` for the other types
+             * @description Where a rule or the excerpt of a checklist item or question came from (`título`, `descrição`,
+             *     `comentário de Maria em 04/11/2026 14:30`, `anexo especificacao.pdf, página 3` or `prompt`);
+             *     `null` for tests and for items analyzed before the origin existed
              */
             origem: null | string;
             /**
-             * @description Literal excerpt of the demand that raised a question; `null` for the other types and for
-             *     questions analyzed before the excerpt existed
+             * @description Literal excerpt of the demand that raised a checklist item or question; `null` for tests, rules,
+             *     excerpts not informed and items analyzed before the excerpt existed
              */
             trecho: null | string;
         };
@@ -749,6 +770,37 @@ export interface components {
              * @description Local date and time of the analysis
              */
             analisadaEm: string;
+            fontes: null | components["schemas"]["FontesDaAnaliseResponse"];
+        };
+        /** @description Attachment sent as a source of an analysis */
+        AnexoDaFonteResponse: {
+            /** @description Attachment identifier in the Asana */
+            gid: string;
+            /** @description File name at the time of the analysis */
+            nome: string;
+        };
+        /** @description File attached to the task in the Asana (in the task itself or in one of its comments) */
+        AnexoResponse: {
+            /** @description Attachment identifier in the Asana (used in the download address) */
+            gid: string;
+            /** @description File name */
+            nome: string;
+            /**
+             * Format: date-time
+             * @description Local date and time of the upload
+             */
+            criadoEm: string;
+            /**
+             * Format: int64
+             * @description Size in bytes; `null` when the Asana does not know it (external files)
+             */
+            tamanho: null | number | string;
+            /** @description Where the file is stored (`asana`, `gdrive`, `dropbox`...) */
+            hospedagem: string;
+            /** @description Whether the file can be a source of the AI analysis */
+            legivelNaAnalise: boolean;
+            /** @description Why the file cannot be a source of the analysis, in pt-BR; `null` when it can */
+            motivo: null | string;
         };
         /** @description Text of a private note */
         AnotacaoRequest: {
@@ -975,6 +1027,37 @@ export interface components {
             /** @description Failure, in pt-BR */
             erro: string;
         };
+        /** @description Sources of an analysis. Without a body, the analysis uses the description and the comments. */
+        FontesDaAnaliseRequest: {
+            modo?: null | components["schemas"]["ModoDaAnalise"];
+            /** @description Send the description (only in the `tarefa` mode); default `true` */
+            descricao?: null | boolean;
+            /**
+             * @description Send the comments and the reopenings; default `true` in the `tarefa` mode and
+             *     `false` in the `prompt` mode
+             */
+            comentarios?: null | boolean;
+            /**
+             * @description Identifiers (`gid`) of attachments of the task in the Asana, in order: the chosen ones in the `tarefa`
+             *     mode, the ones cited by the prompt in the `prompt` mode
+             */
+            anexos?: null | string[];
+            /** @description Request written by the user, required in the `prompt` mode; it may cite files as `@name` */
+            prompt?: null | string;
+        };
+        /** @description Sources sent to the AI by one version of the analysis */
+        FontesDaAnaliseResponse: {
+            /** @description `tarefa` or `prompt` */
+            modo: components["schemas"]["ModoDaAnalise"];
+            /** @description Whether the description was sent */
+            descricao: boolean;
+            /** @description Whether the comments (and the reopenings) were sent */
+            comentarios: boolean;
+            /** @description Attachments sent, in order */
+            anexos: components["schemas"]["AnexoDaFonteResponse"][];
+            /** @description Request written by the user; `null` outside the `prompt` mode */
+            prompt: null | string;
+        };
         /** @description Area of the checklist (e.g. `Front`, `Back: cálculo`) with its items */
         GrupoDoChecklistResponse: {
             /** @description Area name */
@@ -1088,6 +1171,11 @@ export interface components {
             /** @description Reworks of each company of the filter in the month */
             porEmpresa: components["schemas"]["RetrabalhosDaEmpresaNoMesResponse"][];
         };
+        /**
+         * @description How the sources of an analysis were chosen (stored as snake_case text: `tarefa` or `prompt`)
+         * @enum {unknown}
+         */
+        ModoDaAnalise: "tarefa" | "prompt";
         /** @enum {unknown} */
         MotivoArquivamento: "concluida_no_asana" | "reatribuida" | "excluida" | null;
         /** @description One page of a search result, with the total number of records that match the search */
@@ -1129,25 +1217,6 @@ export interface components {
          * @enum {unknown}
          */
         ParteBranch: "front" | "back";
-        /** @description File attached to the task in the Asana (in the task itself or in one of its comments) */
-        AnexoResponse: {
-            /** @description Attachment identifier in the Asana (used in the download address) */
-            gid: string;
-            /** @description File name */
-            nome: string;
-            /**
-             * Format: date-time
-             * @description Local date and time of the upload
-             */
-            criadoEm: string;
-            /**
-             * Format: int64
-             * @description Size in bytes; `null` when the Asana does not know it (external files)
-             */
-            tamanho: null | number | string;
-            /** @description Where the file is stored (`asana`, `gdrive`, `dropbox`...) */
-            hospedagem: string;
-        };
         /** @description Person following the task in the Asana, who can be mentioned in a comment */
         ParticipanteResponse: {
             /** @description User identifier in the Asana (sent back in `mencoes`) */
@@ -2435,7 +2504,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": null | components["schemas"]["FontesDaAnaliseRequest"];
+            };
+        };
         responses: {
             /** @description Created */
             201: {
@@ -2529,55 +2602,6 @@ export interface operations {
             };
         };
     };
-    ListarAnexos: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                identifier: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AnexoResponse"][];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Bad Gateway */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ProblemDetails"];
-                };
-            };
-        };
-    };
     ListarParticipantes: {
         parameters: {
             query?: never;
@@ -2650,6 +2674,103 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ComentarioEnviadoResponse"];
                 };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListarAnexos: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnexoResponse"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    BaixarAnexo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+                anexoGid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Found */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Bad Request */
             400: {

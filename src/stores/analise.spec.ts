@@ -33,7 +33,7 @@ function item(identifier: string, concluido = false): ItemDaAnalise {
 function analise(versao: number, atual: boolean, itens: ItemDaAnalise[] = [item(`i${versao}`)]): Analise {
   return {
     identifier: `a${versao}`, versao, atual, objetivo: `Objetivo ${versao}`, checklist: [{ nome: 'Front', itens }],
-    testes: [], duvidas: [], regras: [], modelo: 'claude-opus-5-5', tokensEntrada: 100, tokensSaida: 50, analisadaEm: '2026-11-03T17:44:00',
+    testes: [], duvidas: [], regras: [], modelo: 'claude-opus-5-5', tokensEntrada: 100, tokensSaida: 50, analisadaEm: '2026-11-03T17:44:00', fontes: null,
   }
 }
 
@@ -81,6 +81,31 @@ describe('useAnaliseStore', () => {
     expect(store.versoes.map((versao) => [versao.versao, versao.atual])).toEqual([[2, true], [1, false]])
     expect(store.exibida?.versao).toBe(2)
     expect(store.analisando).toBe(false)
+  })
+
+  it('envia as fontes escolhidas à API', async () => {
+    listar.mockResolvedValue([])
+    analisar.mockResolvedValue(analise(1, true))
+    const store = useAnaliseStore()
+    await store.carregar('t1')
+    const fontes = { modo: 'prompt' as const, descricao: false, comentarios: true, anexos: ['a1'], prompt: 'Siga @modelo.pdf' }
+
+    await store.analisar(fontes)
+
+    expect(analisar).toHaveBeenCalledWith('t1', fontes)
+  })
+
+  it('guarda os erros por campo das fontes', async () => {
+    listar.mockResolvedValue([analise(1, true)])
+    analisar.mockRejectedValue(new ErroDaApi('problema', 'Dados inválidos.', 400, { anexos: ['O anexo não está mais na tarefa no Asana.'] }))
+    const store = useAnaliseStore()
+    await store.carregar('t1')
+
+    const concluida = await store.analisar({ modo: 'tarefa', descricao: true, comentarios: true, anexos: ['x'], prompt: null })
+
+    expect(concluida).toBe(false)
+    expect(store.erroDaAnalise?.errosPorCampo).toEqual({ anexos: ['O anexo não está mais na tarefa no Asana.'] })
+    expect(store.versoes.map((versao) => versao.versao)).toEqual([1])
   })
 
   it('mantém as versões e guarda o erro quando a análise falha', async () => {

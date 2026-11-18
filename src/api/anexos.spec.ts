@@ -19,14 +19,18 @@ describe('listarAnexos', () => {
   it('converte o tamanho em número e preserva o nulo dos arquivos externos', async () => {
     get.mockResolvedValue(resposta(200, {
       data: [
-        { gid: 'a1', nome: 'print.png', criadoEm: '2026-11-03T10:00:00', tamanho: '512', hospedagem: 'asana' },
-        { gid: 'a2', nome: 'planilha', criadoEm: '2026-11-03T11:00:00', tamanho: null, hospedagem: 'gdrive' },
+        { gid: 'a1', nome: 'print.png', criadoEm: '2026-11-03T10:00:00', tamanho: '512', hospedagem: 'asana', legivelNaAnalise: true, motivo: null },
+        { gid: 'a2', nome: 'planilha', criadoEm: '2026-11-03T11:00:00', tamanho: null, hospedagem: 'gdrive', legivelNaAnalise: false, motivo: 'Arquivos externos não podem ser lidos pela análise.' },
       ],
     }))
 
     const anexos = await listarAnexos('t1')
 
     expect(anexos.map((anexo) => anexo.tamanho)).toEqual([512, null])
+    expect(anexos.map((anexo) => [anexo.legivelNaAnalise, anexo.motivo])).toEqual([
+      [true, null],
+      [false, 'Arquivos externos não podem ser lidos pela análise.'],
+    ])
     expect(get).toHaveBeenCalledWith('/tarefas/{identifier}/anexos', { params: { path: { identifier: 't1' } } })
   })
 
@@ -46,7 +50,7 @@ describe('enderecoDeDownload', () => {
 })
 
 describe('ehExterno', () => {
-  const anexo = (hospedagem: string): Anexo => ({ gid: 'a', nome: 'x', criadoEm: '2026-11-03T10:00:00', tamanho: null, hospedagem })
+  const anexo = (hospedagem: string): Anexo => ({ gid: 'a', nome: 'x', criadoEm: '2026-11-03T10:00:00', tamanho: null, hospedagem, legivelNaAnalise: true, motivo: null })
 
   it('só arquivos fora do Asana são externos', () => {
     expect([ehExterno(anexo('asana')), ehExterno(anexo('gdrive')), ehExterno(anexo(''))]).toEqual([false, true, false])

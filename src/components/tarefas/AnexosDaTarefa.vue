@@ -1,47 +1,22 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { toRef, watch } from 'vue'
 
-import { type Anexo, ehExterno, enderecoDeDownload, listarAnexos } from '@/api/anexos'
+import { type Anexo, ehExterno, enderecoDeDownload } from '@/api/anexos'
 import { tamanhoLegivel } from '@/api/comentarios'
 import { formatarDataHora } from '@/api/datas'
-import { comoErroDaApi } from '@/api/erros'
+import { useAnexosDaTarefa } from '@/composables/useAnexosDaTarefa'
 
 const props = defineProps<{
   /** Tarefa do detalhe */
   identifier: string
 }>()
 
-const anexos = ref<Anexo[]>([])
-const carregando = ref(false)
-const erro = ref<string | null>(null)
-
-/** Identificador da última leitura: uma resposta antiga não sobrescreve a da tarefa atual. */
-let leitura = 0
-
-async function carregar(): Promise<void> {
-  const atual = ++leitura
-  carregando.value = true
-  erro.value = null
-  try {
-    const lidos = await listarAnexos(props.identifier)
-    if (atual === leitura) {
-      anexos.value = lidos
-    }
-  } catch (falha) {
-    if (atual === leitura) {
-      erro.value = comoErroDaApi(falha).message
-    }
-  } finally {
-    if (atual === leitura) {
-      carregando.value = false
-    }
-  }
-}
+const { anexos, carregando, erro, carregar, limpar } = useAnexosDaTarefa(toRef(props, 'identifier'))
 
 watch(
   () => props.identifier,
   () => {
-    anexos.value = []
+    limpar()
     void carregar()
   },
   { immediate: true },

@@ -4,12 +4,16 @@ import {
   type Analise,
   analisarTarefa,
   comItemAtualizado,
+  type FontesDaVersao,
+  fontesPadrao,
+  fontesParaReanalise,
   type ItemDaAnalise,
   listarAnalises,
   marcarItemDaAnalise,
   paraAnalise,
   progressoDoChecklist,
   textoDasDuvidas,
+  textoDasFontes,
   textoParaExploreDoOpenSpec,
 } from './analises'
 import { cliente } from './cliente'
@@ -125,6 +129,23 @@ describe('funções da análise', () => {
       )
     })
 
+    it('cita o trecho dos itens do checklist com a origem', () => {
+      const item: ItemDaAnalise = { ...analise.checklist[0]!.itens[0]!, origem: 'anexo especificacao.pdf, página 3', trecho: 'Agrupar por filial.' }
+
+      const texto = textoParaExploreDoOpenSpec({ ...analise, checklist: [{ nome: 'Front', itens: [item] }] }, tarefa)
+
+      expect(texto).toContain('### Front\n\n- [x] texto c1\n  - Trecho (anexo especificacao.pdf, página 3): "Agrupar por filial."\n')
+    })
+
+    it('traz as fontes nos dados da tarefa e, no modo prompt, o texto como citação', () => {
+      const comAnexo: FontesDaVersao = { modo: 'tarefa', descricao: true, comentarios: false, anexos: [{ gid: 'a1', nome: 'layout.pdf' }], prompt: null }
+      const porPrompt: FontesDaVersao = { modo: 'prompt', descricao: false, comentarios: false, anexos: [], prompt: 'Siga o modelo.\nSem pressa.' }
+
+      expect(textoParaExploreDoOpenSpec({ ...analise, fontes: comAnexo }, tarefa)).toContain('- **Fontes:** Descrição, layout.pdf\n\n## Objetivo')
+      expect(textoParaExploreDoOpenSpec({ ...analise, fontes: porPrompt }, tarefa)).toContain('- **Fontes:** Prompt\n\n> Siga o modelo.\n> Sem pressa.\n\n## Objetivo')
+      expect(textoParaExploreDoOpenSpec(analise, tarefa)).toContain('- **Fontes:** Descrição e comentários\n')
+    })
+
     it('termina sempre com os locais do código e as notas para a exploração', () => {
       const locais =
         '## Locais\n\n- Front: D:\\Aureum\\erp-frontend\\erp-aureum\\src\\pages\\\n' +
@@ -142,6 +163,29 @@ describe('funções da análise', () => {
 
       expect(texto).not.toMatch(/Checklist|Testes|Dúvidas|Regras|Projetos/)
       expect(texto).toContain('## Objetivo\n\nAbater o IPI.\n\n## Locais\n')
+    })
+  })
+
+  describe('fontes', () => {
+    it('o padrão é descrição e comentários, sem anexos', () => {
+      expect(fontesPadrao()).toEqual({ modo: 'tarefa', descricao: true, comentarios: true, anexos: [], prompt: null })
+    })
+
+    it('a reanálise reaproveita as fontes da versão, com o prompt', () => {
+      const fontes: FontesDaVersao = { modo: 'prompt', descricao: false, comentarios: true, anexos: [{ gid: 'a1', nome: 'modelo.pdf' }], prompt: 'Siga @modelo.pdf' }
+
+      expect(fontesParaReanalise({ ...analise, fontes })).toEqual({ modo: 'prompt', descricao: false, comentarios: true, anexos: ['a1'], prompt: 'Siga @modelo.pdf' })
+      expect(fontesParaReanalise(analise)).toEqual(fontesPadrao())
+      expect(fontesParaReanalise(null)).toEqual(fontesPadrao())
+    })
+
+    it('descreve as fontes de cada versão', () => {
+      expect(textoDasFontes(null)).toBe('Descrição e comentários')
+      expect(textoDasFontes({ modo: 'tarefa', descricao: true, comentarios: true, anexos: [{ gid: 'a1', nome: 'layout.pdf' }], prompt: null })).toBe(
+        'Descrição, Comentários, layout.pdf',
+      )
+      expect(textoDasFontes({ modo: 'tarefa', descricao: false, comentarios: false, anexos: [{ gid: 'a1', nome: 'a.pdf' }, { gid: 'a2', nome: 'b.png' }], prompt: null })).toBe('a.pdf, b.png')
+      expect(textoDasFontes({ modo: 'prompt', descricao: false, comentarios: false, anexos: [], prompt: 'x' })).toBe('Prompt')
     })
   })
 
@@ -180,6 +224,16 @@ describe('chamadas', () => {
 
     expect(get).toHaveBeenCalledWith('/tarefas/{identifier}/analises', { params: { path: { identifier: 't1' } } })
     expect(analises[0]!.versao).toBe(2)
+  })
+
+  it('analisa enviando as fontes no corpo', async () => {
+    post.mockResolvedValue(resposta(201, { data: { ...analiseDaApi, fontes: null } }))
+    const fontes = { modo: 'tarefa' as const, descricao: false, comentarios: false, anexos: ['a1'], prompt: null }
+
+    const analise = await analisarTarefa('t1', fontes)
+
+    expect(post).toHaveBeenCalledWith('/tarefas/{identifier}/analises', { params: { path: { identifier: 't1' } }, body: fontes })
+    expect(analise.fontes).toBeNull()
   })
 
   it('analisa e lança o erro da API com a mensagem em pt-BR', async () => {

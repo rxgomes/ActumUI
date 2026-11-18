@@ -1,8 +1,17 @@
 <script setup lang="ts">
 import { copyToClipboard, useQuasar } from 'quasar'
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 
-import { type ItemDaAnalise as Item, progressoDoChecklist, textoDasDuvidas, textoParaExploreDoOpenSpec } from '@/api/analises'
+import {
+  type FontesDaAnalise,
+  fontesPadrao,
+  fontesParaReanalise,
+  type ItemDaAnalise as Item,
+  progressoDoChecklist,
+  textoDasDuvidas,
+  textoDasFontes,
+  textoParaExploreDoOpenSpec,
+} from '@/api/analises'
 import { textoDasDuvidasParaEnviar } from '@/api/comentarios'
 import { formatarDataHora } from '@/api/datas'
 import { useNotificarErro } from '@/composables/useNotificarErro'
@@ -10,6 +19,7 @@ import { useAnaliseStore } from '@/stores/analise'
 import { useNovoComentarioStore } from '@/stores/novoComentario'
 import { useTarefaStore } from '@/stores/tarefa'
 
+import FontesDaAnaliseDialog from './FontesDaAnaliseDialog.vue'
 import ItemDaAnalise from './ItemDaAnalise.vue'
 
 const ComandoDaChave = 'dotnet user-secrets set "Claude:ApiKey" "<sua-chave>" --project src/Actum.Api'
@@ -47,25 +57,26 @@ const versaoSelecionada = computed({
   set: (versao: number | null) => analise.exibir(versao),
 })
 
-async function executarAnalise(): Promise<void> {
-  if (await analise.analisar()) {
-    quasar.notify({ type: 'positive', message: 'Análise concluída.', position: 'top' })
-    // A análise grava os comentários que estavam só no Asana: recarrega o detalhe para exibi-los.
-    void tarefa.recarregar()
-  }
+const dialogoAberto = ref(false)
+const fontesIniciais = ref<FontesDaAnalise>(fontesPadrao())
+const proximaVersao = computed(() => (analise.atual?.versao ?? 0) + 1)
+
+/** Primeira análise: o diálogo de fontes abre com descrição e comentários. */
+function analisar(): void {
+  fontesIniciais.value = fontesPadrao()
+  dialogoAberto.value = true
 }
 
+/** Reanálise: o diálogo abre com as fontes da versão atual (itens iguais aos marcados continuam marcados). */
 function reanalisar(): void {
-  const proxima = (analise.atual?.versao ?? 0) + 1
-  quasar
-    .dialog({
-      title: 'Reanalisar com IA',
-      message: `A reanálise é uma nova chamada paga à Claude API e gera a versão ${proxima}. Itens iguais aos já marcados continuam marcados.`,
-      cancel: { label: 'Cancelar', flat: true, noCaps: true },
-      ok: { label: 'Reanalisar', color: 'primary', unelevated: true, noCaps: true },
-      persistent: true,
-    })
-    .onOk(() => void executarAnalise())
+  fontesIniciais.value = fontesParaReanalise(analise.atual)
+  dialogoAberto.value = true
+}
+
+function aposAnalise(): void {
+  quasar.notify({ type: 'positive', message: 'Análise concluída.', position: 'top' })
+  // A análise grava os comentários que estavam só no Asana: recarrega o detalhe para exibi-los.
+  void tarefa.recarregar()
 }
 
 async function marcar(item: Item, concluido: boolean): Promise<void> {
@@ -186,7 +197,7 @@ function habilitado(item: Item): boolean {
 
     <template v-else>
       <q-card-section v-if="analise.analisando" class="text-body2 text-grey-8 q-py-sm">
-        Analisando a demanda… pode levar até um minuto.
+        Analisando a demanda… pode levar até um minuto, ou mais com anexos.
       </q-card-section>
 
       <q-card-section v-if="analise.erroDaAnalise" class="q-py-sm">
@@ -212,10 +223,11 @@ function habilitado(item: Item): boolean {
       <!-- Sem análise -->
       <q-card-section v-else-if="!exibida" class="row items-center q-gutter-md">
         <div class="col text-body2 text-grey-8">
-          A IA lê a descrição, os comentários (atualizados pelo Asana na hora) e os retrabalhos da tarefa e organiza a
-          demanda em objetivo, checklist por área, testes, dúvidas para quem pediu e regras e observações.
+          A IA lê as fontes que você escolher (a descrição, os comentários atualizados pelo Asana na hora, os anexos da
+          tarefa ou um prompt seu) e organiza a demanda em objetivo, checklist por área, testes, dúvidas para quem pediu e
+          regras e observações, mostrando de onde veio cada item.
           <div class="text-caption text-grey-7 q-mt-xs">
-            Cada análise é uma chamada paga à Claude API e envia o conteúdo da tarefa à Anthropic.
+            Cada análise é uma chamada paga à Claude API e envia o conteúdo escolhido, inclusive os anexos, à Anthropic.
           </div>
         </div>
         <q-btn
@@ -226,7 +238,7 @@ function habilitado(item: Item): boolean {
           label="Analisar com IA"
           :disable="!podeAnalisar"
           :loading="analise.analisando"
-          @click="executarAnalise"
+          @click="analisar"
         >
           <q-tooltip v-if="arquivada">Tarefas arquivadas não podem ser analisadas.</q-tooltip>
         </q-btn>
@@ -333,14 +345,41 @@ function habilitado(item: Item): boolean {
         <q-card-section class="text-caption text-grey-7 q-py-sm">
           Versão {{ exibida.versao }} · {{ formatarDataHora(exibida.analisadaEm) }} · {{ exibida.modelo }} ·
           {{ exibida.tokensEntrada.toLocaleString('pt-BR') }} tokens de entrada, {{ exibida.tokensSaida.toLocaleString('pt-BR') }} de saída
+          <div class="fontes">Fontes: {{ textoDasFontes(exibida.fontes) }}</div>
         </q-card-section>
+        <q-expansion-item
+          v-if="exibida.fontes?.modo === 'prompt' && exibida.fontes.prompt"
+          dense
+          dense-toggle
+          icon="edit_note"
+          label="Ver prompt"
+          header-class="text-caption text-grey-8"
+        >
+          <q-card-section class="q-pt-none text-body2 text-grey-9 prompt">{{ exibida.fontes.prompt }}</q-card-section>
+        </q-expansion-item>
       </template>
     </template>
+
+    <FontesDaAnaliseDialog
+      v-model:aberto="dialogoAberto"
+      :identifier="identifier"
+      :inicial="fontesIniciais"
+      :proxima-versao="proximaVersao"
+      @concluido="aposAnalise"
+    />
   </q-card>
 </template>
 
 <style scoped>
 .objetivo {
+  white-space: pre-line;
+}
+
+.fontes {
+  word-break: break-word;
+}
+
+.prompt {
   white-space: pre-line;
 }
 </style>

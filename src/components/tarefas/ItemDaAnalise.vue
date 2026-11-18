@@ -31,6 +31,18 @@ const rotuloMarcado = computed(() => {
       return 'Feito'
   }
 })
+
+/** Ícone da origem sem trecho: anexo, prompt do usuário, comentário ou o próprio texto da tarefa. */
+const iconeDaOrigem = computed(() => {
+  const origem = props.item.origem ?? ''
+  if (origem.startsWith('anexo')) {
+    return 'attach_file'
+  }
+  if (origem === 'prompt') {
+    return 'edit_note'
+  }
+  return origem.startsWith('comentário') ? 'chat' : 'notes'
+})
 </script>
 
 <template>
@@ -65,7 +77,7 @@ const rotuloMarcado = computed(() => {
         </span>
       </q-item-label>
       <q-item-label v-else-if="item.origem" caption class="text-grey-7 row no-wrap items-start q-mt-xs">
-        <q-icon name="chat" size="14px" class="q-mr-xs q-mt-xs" />
+        <q-icon :name="iconeDaOrigem" size="14px" class="q-mr-xs q-mt-xs" />
         <span>{{ item.origem }}</span>
       </q-item-label>
     </q-item-section>

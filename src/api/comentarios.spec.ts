@@ -108,7 +108,7 @@ describe('textoDasDuvidasParaEnviar', () => {
   function analise(duvidas: ItemDaAnalise[]): Analise {
     return {
       identifier: 'a1', versao: 1, atual: true, objetivo: 'o', checklist: [], testes: [], duvidas, regras: [],
-      modelo: 'claude-opus-5-5', tokensEntrada: 1, tokensSaida: 1, analisadaEm: '2026-11-03T17:44:00',
+      modelo: 'claude-opus-5-5', tokensEntrada: 1, tokensSaida: 1, analisadaEm: '2026-11-03T17:44:00', fontes: null,
     }
   }
 

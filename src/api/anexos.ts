@@ -5,7 +5,10 @@ import type { components } from './schema'
 
 type AnexoDaApi = components['schemas']['AnexoResponse']
 
-/** Arquivo anexado à tarefa no Asana (na própria tarefa ou num comentário). */
+/**
+ * Arquivo anexado à tarefa no Asana (na própria tarefa ou num comentário), com a indicação da API de que pode ser
+ * fonte da análise com IA (`legivelNaAnalise`) e, se não puder, o `motivo`.
+ */
 export interface Anexo extends Omit<AnexoDaApi, 'tamanho'> {
   /** Tamanho em bytes; `null` quando o Asana não sabe (arquivos externos, como Google Drive) */
   tamanho: number | null

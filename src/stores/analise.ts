@@ -5,6 +5,7 @@ import {
   type Analise,
   analisarTarefa,
   comItemAtualizado,
+  type FontesDaAnalise,
   type ItemDaAnalise,
   listarAnalises,
   marcarItemDaAnalise,
@@ -69,10 +70,11 @@ export const useAnaliseStore = defineStore('analise', () => {
   }
 
   /**
-   * Analisa a demanda (chamada paga) e exibe a nova versão. Em falha, guarda o erro em `erroDaAnalise` e mantém as
-   * versões. Devolve se a análise foi concluída.
+   * Analisa a demanda com as fontes escolhidas (chamada paga) e exibe a nova versão. Em falha, guarda o erro em
+   * `erroDaAnalise` (inclusive os erros por campo das fontes, em `errosPorCampo`) e mantém as versões. Devolve se a
+   * análise foi concluída.
    */
-  async function analisar(): Promise<boolean> {
+  async function analisar(fontes?: FontesDaAnalise): Promise<boolean> {
     const tarefa = identifier.value
     if (tarefa === null || analisando.value) {
       return false
@@ -81,7 +83,7 @@ export const useAnaliseStore = defineStore('analise', () => {
     analisando.value = true
     erroDaAnalise.value = null
     try {
-      const nova = await analisarTarefa(tarefa)
+      const nova = await analisarTarefa(tarefa, fontes)
       if (identifier.value !== tarefa) {
         return false
       }

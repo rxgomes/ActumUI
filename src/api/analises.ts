@@ -13,6 +13,18 @@ export type SituacaoClaude = components['schemas']['ClaudeSituacaoResponse']
 /** Tipo do item: ação do checklist, teste, dúvida para quem pediu ou regra a respeitar. */
 export type TipoItemDaAnalise = components['schemas']['TipoItemAnalise']
 
+/** Como as fontes foram escolhidas: `tarefa` (descrição, comentários e/ou anexos) ou `prompt` (texto do usuário). */
+export type ModoDaAnalise = components['schemas']['ModoDaAnalise']
+
+/**
+ * Fontes pedidas para uma análise (corpo do `POST`): no modo `tarefa`, descrição, comentários e os gids dos anexos
+ * escolhidos; no modo `prompt`, o texto do usuário, os comentários e os gids dos anexos citados nele.
+ */
+export type FontesDaAnalise = components['schemas']['FontesDaAnaliseRequest']
+
+/** Fontes que a API gravou numa versão da análise (anexos com gid e nome). */
+export type FontesDaVersao = components['schemas']['FontesDaAnaliseResponse']
+
 /** Item marcável da análise (checklist feito, teste realizado, dúvida resolvida, regra atendida). */
 export interface ItemDaAnalise extends Omit<ItemDaApi, 'ordem'> {
   ordem: number
@@ -34,6 +46,8 @@ export interface Analise extends Omit<AnaliseDaApi, 'versao' | 'tokensEntrada' |
   duvidas: ItemDaAnalise[]
   /** Regras, restrições e sugestões, cada uma com a origem; vazia em versões anteriores às regras */
   regras: ItemDaAnalise[]
+  /** Fontes enviadas à IA; `null` em versões feitas antes de as fontes serem gravadas */
+  fontes: FontesDaVersao | null
 }
 
 /** Informa se a chave da Claude API está configurada e o modelo das análises. Não chama a Anthropic. */
@@ -48,13 +62,56 @@ export async function listarAnalises(identifier: string): Promise<Analise[]> {
 }
 
 /**
- * Analisa a demanda com IA e devolve a nova versão (atual). Chamada paga, que pode levar até um minuto. Lança
- * `ErroDaApi` em falha (`400` sem chave, sem créditos, chave recusada, recusa do modelo ou tarefa arquivada; `409`
- * análise em andamento; `502` Anthropic indisponível ou resposta incompleta).
+ * Analisa a demanda com IA, com as fontes escolhidas (sem fontes, a API usa descrição e comentários), e devolve a nova
+ * versão (atual). Chamada paga, que pode levar minutos com anexos. Lança `ErroDaApi` em falha (`400` com
+ * `errosPorCampo` em `fontes`, `anexos` ou `prompt`, sem chave, sem créditos, chave recusada, anexo recusado, recusa
+ * do modelo ou tarefa arquivada; `409` análise em andamento; `502` Asana ou Anthropic indisponível ou resposta incompleta).
  */
-export async function analisarTarefa(identifier: string): Promise<Analise> {
-  const analise = await executar(() => cliente.POST('/tarefas/{identifier}/analises', { params: { path: { identifier } } }))
+export async function analisarTarefa(identifier: string, fontes?: FontesDaAnalise): Promise<Analise> {
+  const analise = await executar(() => cliente.POST('/tarefas/{identifier}/analises', { params: { path: { identifier } }, body: fontes }))
   return paraAnalise(analise)
+}
+
+/** Fontes de uma primeira análise: descrição e comentários, sem anexos. */
+export function fontesPadrao(): FontesDaAnalise {
+  return { modo: 'tarefa', descricao: true, comentarios: true, anexos: [], prompt: null }
+}
+
+/** Fontes para reanalisar: as que a versão usou (com o texto do prompt), ou o padrão para versões sem fontes gravadas. */
+export function fontesParaReanalise(analise: Analise | null): FontesDaAnalise {
+  const fontes = analise?.fontes
+  if (!fontes) {
+    return fontesPadrao()
+  }
+
+  return {
+    modo: fontes.modo,
+    descricao: fontes.descricao,
+    comentarios: fontes.comentarios,
+    anexos: fontes.anexos.map((anexo) => anexo.gid),
+    prompt: fontes.prompt,
+  }
+}
+
+/** Fontes de uma versão em texto, para o rodapé e o OpenSpec (ex.: "Descrição, layout.pdf", "Prompt"). */
+export function textoDasFontes(fontes: FontesDaVersao | null): string {
+  if (!fontes) {
+    return 'Descrição e comentários'
+  }
+
+  const partes: string[] = []
+  if (fontes.modo === 'prompt') {
+    partes.push('Prompt')
+  }
+  if (fontes.descricao) {
+    partes.push('Descrição')
+  }
+  if (fontes.comentarios) {
+    partes.push('Comentários')
+  }
+  partes.push(...fontes.anexos.map((anexo) => anexo.nome))
+
+  return partes.join(', ')
 }
 
 /** Marca (feito, realizado ou resolvido) ou desmarca um item da versão atual e devolve o item atualizado. */
@@ -121,8 +178,9 @@ const NotasDoExplore = ['1. Decisões que eu preciso tomar, com opções e recom
 
 /**
  * Texto em Markdown pronto para colar no Claude Code: começa com `/opsx:explore <título>` e traz os dados da tarefa,
- * o objetivo, o checklist por área, os testes, as dúvidas e as regras como listas de tarefas (`[x]` nos marcados),
- * com os trechos vagos, o trecho que gerou cada dúvida e a origem das regras, e termina sempre com as seções "Locais" (onde está o código do ERP)
+ * as fontes da análise (com o texto do prompt, quando houver), o objetivo, o checklist por área, os testes, as dúvidas
+ * e as regras como listas de tarefas (`[x]` nos marcados), com os trechos vagos, o trecho que gerou cada item (com a
+ * origem) e a origem das regras, e termina sempre com as seções "Locais" (onde está o código do ERP)
  * e "Notas" (orientações para a exploração).
  * Blocos vazios são omitidos.
  */
@@ -142,6 +200,10 @@ export function textoParaExploreDoOpenSpec(analise: Analise, tarefa: TarefaParaO
 
   linhas.push(`- **Asana:** ${tarefa.linkAsana}`)
   linhas.push(`- **Análise:** versão ${analise.versao}, de ${formatarDataHora(analise.analisadaEm)}`)
+  linhas.push(`- **Fontes:** ${textoDasFontes(analise.fontes)}`)
+  if (analise.fontes?.modo === 'prompt' && analise.fontes.prompt) {
+    linhas.push('', ...analise.fontes.prompt.split(/\r?\n/).map((linha) => `> ${linha}`.trimEnd()))
+  }
   linhas.push('', '## Objetivo', '', analise.objetivo.trim())
 
   const itens = (lista: ItemDaAnalise[]) => lista.flatMap(linhasDoItem)

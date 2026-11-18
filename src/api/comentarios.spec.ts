@@ -102,7 +102,7 @@ describe('validarArquivos', () => {
 
 describe('textoDasDuvidasParaEnviar', () => {
   function duvida(texto: string, concluido: boolean): ItemDaAnalise {
-    return { identifier: texto, tipo: 'duvida', ordem: 1, texto, grupo: null, vago: null, concluido, concluidoEm: null, origem: null }
+    return { identifier: texto, tipo: 'duvida', ordem: 1, texto, grupo: null, vago: null, concluido, concluidoEm: null, origem: null, trecho: null }
   }
 
   function analise(duvidas: ItemDaAnalise[]): Analise {

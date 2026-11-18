@@ -57,7 +57,14 @@ const rotuloMarcado = computed(() => {
         <q-icon name="warning" size="16px" class="q-mr-xs" />
         <span><span class="text-weight-medium">Vago:</span> {{ item.vago }}</span>
       </q-item-label>
-      <q-item-label v-if="item.origem" caption class="text-grey-7 row no-wrap items-start q-mt-xs">
+      <q-item-label v-if="item.trecho" caption class="text-grey-8 row no-wrap items-start q-mt-xs">
+        <q-icon name="format_quote" size="14px" class="q-mr-xs q-mt-xs" />
+        <span>
+          <span class="trecho">“{{ item.trecho }}”</span>
+          <span v-if="item.origem" class="text-grey-7"> — {{ item.origem }}</span>
+        </span>
+      </q-item-label>
+      <q-item-label v-else-if="item.origem" caption class="text-grey-7 row no-wrap items-start q-mt-xs">
         <q-icon name="chat" size="14px" class="q-mr-xs q-mt-xs" />
         <span>{{ item.origem }}</span>
       </q-item-label>
@@ -68,5 +75,10 @@ const rotuloMarcado = computed(() => {
 <style scoped>
 .text-strike {
   text-decoration: line-through;
+}
+
+.trecho {
+  font-style: italic;
+  white-space: pre-line;
 }
 </style>

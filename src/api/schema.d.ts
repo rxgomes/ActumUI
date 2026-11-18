@@ -476,6 +476,26 @@ export interface paths {
         patch: operations["MarcarItemDaAnalise"];
         trace?: never;
     };
+    "/tarefas/{identifier}/anexos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Anexos da tarefa
+         * @description Lê do Asana, na hora, os arquivos anexados à tarefa e aos seus comentários, do mais antigo para o mais recente.
+         */
+        get: operations["ListarAnexos"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tarefas/{identifier}/participantes": {
         parameters: {
             query?: never;
@@ -675,10 +695,15 @@ export interface components {
              */
             concluidoEm: null | string;
             /**
-             * @description Where a rule came from (`descrição` or `comentário de Maria em 04/11/2026 14:30`);
-             *     `null` for the other types
+             * @description Where a rule or the excerpt of a question came from (`descrição` or
+             *     `comentário de Maria em 04/11/2026 14:30`); `null` for the other types
              */
             origem: null | string;
+            /**
+             * @description Literal excerpt of the demand that raised a question; `null` for the other types and for
+             *     questions analyzed before the excerpt existed
+             */
+            trecho: null | string;
         };
         /** @description One version of the AI analysis of a task */
         AnaliseResponse: {
@@ -1104,6 +1129,25 @@ export interface components {
          * @enum {unknown}
          */
         ParteBranch: "front" | "back";
+        /** @description File attached to the task in the Asana (in the task itself or in one of its comments) */
+        AnexoResponse: {
+            /** @description Attachment identifier in the Asana (used in the download address) */
+            gid: string;
+            /** @description File name */
+            nome: string;
+            /**
+             * Format: date-time
+             * @description Local date and time of the upload
+             */
+            criadoEm: string;
+            /**
+             * Format: int64
+             * @description Size in bytes; `null` when the Asana does not know it (external files)
+             */
+            tamanho: null | number | string;
+            /** @description Where the file is stored (`asana`, `gdrive`, `dropbox`...) */
+            hospedagem: string;
+        };
         /** @description Person following the task in the Asana, who can be mentioned in a comment */
         ParticipanteResponse: {
             /** @description User identifier in the Asana (sent back in `mencoes`) */
@@ -2476,6 +2520,55 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ListarAnexos: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnexoResponse"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
                 headers: {
                     [name: string]: unknown;
                 };

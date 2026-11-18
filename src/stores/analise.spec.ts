@@ -27,7 +27,7 @@ const analisar = vi.mocked(analisarTarefa)
 const marcar = vi.mocked(marcarItemDaAnalise)
 
 function item(identifier: string, concluido = false): ItemDaAnalise {
-  return { identifier, tipo: 'checklist', ordem: 1, texto: identifier, grupo: 'Front', vago: null, concluido, concluidoEm: null, origem: null }
+  return { identifier, tipo: 'checklist', ordem: 1, texto: identifier, grupo: 'Front', vago: null, concluido, concluidoEm: null, origem: null, trecho: null }
 }
 
 function analise(versao: number, atual: boolean, itens: ItemDaAnalise[] = [item(`i${versao}`)]): Analise {

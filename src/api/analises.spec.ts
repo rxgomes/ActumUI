@@ -37,6 +37,7 @@ function itemDaApi(identifier: string, tipo: 'checklist' | 'teste' | 'duvida' | 
     concluido,
     concluidoEm: concluido ? '2026-11-03T17:50:00' : null,
     origem: tipo === 'regra' ? 'comentário de Maria em 04/11/2026 14:30' : null,
+    trecho: null,
   }
 }
 
@@ -106,6 +107,22 @@ describe('funções da análise', () => {
       expect(texto).toContain('## Regras e observações\n\n- [ ] texto r1\n  - Origem: comentário de Maria em 04/11/2026 14:30\n')
       const ordem = ['## Objetivo', '## Checklist', '## Testes', '## Dúvidas', '## Regras', '## Locais', '## Notas'].map((titulo) => texto.indexOf(titulo))
       expect(ordem).toEqual([...ordem].sort((a, b) => a - b))
+    })
+
+    it('cita o trecho que gerou a dúvida, com a origem, em uma linha', () => {
+      const duvida: ItemDaAnalise = {
+        ...analise.duvidas[0]!,
+        origem: 'descrição',
+        trecho: 'Preencher ao criar,\n  pois se o usuário mudar algo a mão, segue o dele.',
+      }
+      const semOrigem: ItemDaAnalise = { ...analise.duvidas[1]!, trecho: 'Somar o IPI.' }
+
+      const texto = textoParaExploreDoOpenSpec({ ...analise, duvidas: [duvida, semOrigem] }, tarefa)
+
+      expect(texto).toContain(
+        '## Dúvidas para o solicitante\n\n- [ ] texto d1\n  - Trecho (descrição): "Preencher ao criar, pois se o usuário mudar algo a mão, segue o dele."\n' +
+          '- [ ] texto d2\n  - Trecho: "Somar o IPI."\n',
+      )
     })
 
     it('termina sempre com os locais do código e as notas para a exploração', () => {

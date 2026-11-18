@@ -122,7 +122,7 @@ const NotasDoExplore = ['1. Decisões que eu preciso tomar, com opções e recom
 /**
  * Texto em Markdown pronto para colar no Claude Code: começa com `/opsx:explore <título>` e traz os dados da tarefa,
  * o objetivo, o checklist por área, os testes, as dúvidas e as regras como listas de tarefas (`[x]` nos marcados),
- * com os trechos vagos e a origem das regras, e termina sempre com as seções "Locais" (onde está o código do ERP)
+ * com os trechos vagos, o trecho que gerou cada dúvida e a origem das regras, e termina sempre com as seções "Locais" (onde está o código do ERP)
  * e "Notas" (orientações para a exploração).
  * Blocos vazios são omitidos.
  */
@@ -175,7 +175,10 @@ function linhasDoItem(item: ItemDaAnalise): string[] {
   if (item.vago) {
     linhas.push(`  - ⚠️ Vago: ${item.vago}`)
   }
-  if (item.origem) {
+  if (item.trecho) {
+    const trecho = item.trecho.replace(/\s*\n\s*/g, ' ')
+    linhas.push(item.origem ? `  - Trecho (${item.origem}): "${trecho}"` : `  - Trecho: "${trecho}"`)
+  } else if (item.origem) {
     linhas.push(`  - Origem: ${item.origem}`)
   }
   return linhas

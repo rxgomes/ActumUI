@@ -14,6 +14,7 @@ import {
   retomarTarefa,
 } from '@/api/tarefas'
 import type { AcaoDaTarefa } from '@/components/tarefas/acoes'
+import AnexosDaTarefa from '@/components/tarefas/AnexosDaTarefa.vue'
 import AnotacoesDaTarefa from '@/components/tarefas/AnotacoesDaTarefa.vue'
 import AnaliseDaTarefa from '@/components/tarefas/AnaliseDaTarefa.vue'
 import BranchesDaTarefa from '@/components/tarefas/BranchesDaTarefa.vue'
@@ -232,6 +233,7 @@ function removerWorktreeDaBranch(branch: Branch): void {
         <div class="col-12 col-lg-5">
           <AnaliseDaTarefa :identifier="tarefa.detalhe.identifier" :arquivada="tarefa.detalhe.status === 'arquivada'" />
           <RetrabalhosDaTarefa :retrabalhos="tarefa.detalhe.retrabalhos" :comentarios-novos="tarefa.comentariosNovos" />
+          <AnexosDaTarefa :identifier="tarefa.detalhe.identifier" />
           <ComentariosDaTarefa
             :identifier="tarefa.detalhe.identifier"
             :arquivada="tarefa.detalhe.status === 'arquivada'"
